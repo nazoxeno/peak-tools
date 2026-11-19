@@ -4,6 +4,7 @@ import { IconAlertTriangle, IconHome, IconLogout, IconSelector, IconSettings, Ic
 import type { ReactNode } from 'react';
 import { useAppConfig } from '../app-config/ConfigProvider';
 import { useAuth } from '../auth/AuthProvider';
+import { AuthorCredit } from '../components/AuthorCredit';
 import { ColorSchemeToggle } from '../components/ColorSchemeToggle';
 import { Logo } from '../components/Logo';
 import { SessionGuard } from '../components/SessionGuard';
@@ -15,7 +16,7 @@ import { TOOLS, toolsByCategory } from '../tools/registry';
 export function AppLayout({ route, children }: { route: string; children: ReactNode }) {
   const [opened, { toggle, close }] = useDisclosure();
   const current = TOOLS.find((t) => t.id === route);
-  const { error: configError } = useAppConfig();
+  const { error: configError, canEditConfig } = useAppConfig();
   const running = useRunningTasks();
 
   return (
@@ -94,16 +95,22 @@ export function AppLayout({ route, children }: { route: string; children: ReactN
         </AppShell.Section>
 
         <AppShell.Section p="sm">
-          <NavLink
-            className="nav-link"
-            href={hrefOf('settings')}
-            label="Cấu hình"
-            leftSection={<IconSettings size={18} stroke={1.7} />}
-            active={route === 'settings'}
-            onClick={close}
-            mb="xs"
-          />
+          {/* Chỉ người có quyền sửa Sheet cấu hình mới thấy trang Cấu hình */}
+          {canEditConfig && (
+            <NavLink
+              className="nav-link"
+              href={hrefOf('settings')}
+              label="Cấu hình"
+              leftSection={<IconSettings size={18} stroke={1.7} />}
+              active={route === 'settings'}
+              onClick={close}
+              mb="xs"
+            />
+          )}
           <UserMenu />
+          <div style={{ marginTop: 10 }}>
+            <AuthorCredit showVersion />
+          </div>
         </AppShell.Section>
       </AppShell.Navbar>
 
@@ -112,11 +119,18 @@ export function AppLayout({ route, children }: { route: string; children: ReactN
           <SessionGuard />
           {configError && route !== 'settings' && (
             <Alert color="orange" variant="light" icon={<IconAlertTriangle />} mb="lg">
-              {configError.message} Đang dùng cấu hình mặc định —{' '}
-              <Anchor href={hrefOf('settings')} size="sm">
-                xem trang Cấu hình
-              </Anchor>
-              .
+              {configError.message} Đang dùng cấu hình mặc định
+              {canEditConfig ? (
+                <>
+                  {' '}—{' '}
+                  <Anchor href={hrefOf('settings')} size="sm">
+                    xem trang Cấu hình
+                  </Anchor>
+                  .
+                </>
+              ) : (
+                '.'
+              )}
             </Alert>
           )}
           {children}

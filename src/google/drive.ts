@@ -20,6 +20,16 @@ export function getFile(fileId: string, fields = 'id,name,mimeType,webViewLink,o
   return googleFetch<DriveFile>(`${API}/files/${fileId}`, { query: { fields, ...ALL_DRIVES } });
 }
 
+/** Người dùng hiện tại có quyền sửa file không (Editor trở lên). Lỗi → coi như không. */
+export async function canEditFile(fileId: string): Promise<boolean> {
+  try {
+    const f = await getFile(fileId, 'capabilities(canEdit)');
+    return Boolean(f.capabilities?.canEdit);
+  } catch {
+    return false;
+  }
+}
+
 /** Lấy toàn bộ con trực tiếp của 1 folder (tự phân trang). */
 export async function listChildren(
   folderId: string,

@@ -8,7 +8,10 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import { AuthProvider } from './auth/AuthProvider';
+import { printConsoleSignature } from './branding';
 import { theme } from './theme/theme';
+
+printConsoleSignature();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -1,6 +1,7 @@
 import { Badge, Card, Group, SimpleGrid, Stack, Text, ThemeIcon, Title } from '@mantine/core';
 import { IconArrowRight } from '@tabler/icons-react';
 import { useAuth } from '../auth/AuthProvider';
+import { AuthorCredit } from '../components/AuthorCredit';
 import { hrefOf } from '../lib/router';
 import { TOOLS, toolsByCategory } from '../tools/registry';
 
@@ -66,6 +67,7 @@ export function HomePage() {
           </SimpleGrid>
         </div>
       ))}
+      <AuthorCredit />
     </Stack>
   );
 }

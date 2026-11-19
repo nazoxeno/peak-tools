@@ -35,3 +35,7 @@ desktop.ini
 *.log
 *.tmp
 .cache/
+
+# --- Game Link Check (scripts/game-check): token đăng nhập Google ---
+scripts/game-check/token.json
+scripts/game-check/game-session.json

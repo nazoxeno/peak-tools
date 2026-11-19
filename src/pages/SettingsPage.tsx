@@ -29,6 +29,7 @@ import { useState } from 'react';
 import { useAppConfig } from '../app-config/ConfigProvider';
 import { createConfigTemplate } from '../app-config/sheetConfig';
 import { useAuth } from '../auth/AuthProvider';
+import { CONTACT } from '../branding';
 import { ENV } from '../env';
 
 const sheetUrl = (id: string) => `https://docs.google.com/spreadsheets/d/${id}/edit`;
@@ -88,7 +89,7 @@ export function SettingsPage() {
           {error && (
             <Alert mt="md" color={error.kind === 'noAccess' ? 'orange' : 'red'} variant="light" icon={<IconAlertTriangle />}>
               {error.message}{' '}
-              {error.kind === 'noAccess' && 'Hãy nhờ người quản lý chia sẻ Sheet cho bạn (quyền xem).'}
+              {error.kind === 'noAccess' && `${CONTACT} để được chia sẻ Sheet.`}
               {error.kind !== 'noAccess' && 'Đang dùng cấu hình mặc định.'}
             </Alert>
           )}

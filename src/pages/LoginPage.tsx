@@ -1,6 +1,7 @@
 import { Alert, Box, Button, Center, Group, Loader, SimpleGrid, Stack, Text, ThemeIcon, Title } from '@mantine/core';
 import { IconAlertTriangle, IconBolt, IconBrandGoogle, IconShieldLock, IconUsers } from '@tabler/icons-react';
 import { useAuth } from '../auth/AuthProvider';
+import { AuthorCredit } from '../components/AuthorCredit';
 import { Logo } from '../components/Logo';
 import { ENV } from '../env';
 
@@ -40,9 +41,9 @@ export function LoginPage() {
               ))}
             </Stack>
           </div>
-          <Text size="xs" c="rgba(255,255,255,.6)">
-            © P.E.A.K Team
-          </Text>
+          <Box style={{ alignSelf: 'flex-start' }}>
+            <AuthorCredit inverted />
+          </Box>
         </Stack>
       </Box>
 
@@ -82,6 +83,9 @@ export function LoginPage() {
             Lần đầu đăng nhập, Google sẽ hỏi quyền truy cập Drive và Sheets. Bạn có thể chọn tài khoản khác bất cứ lúc
             nào trong menu tài khoản.
           </Text>
+          <Box hiddenFrom="md" mt="md">
+            <AuthorCredit />
+          </Box>
         </Stack>
       </Center>
     </SimpleGrid>

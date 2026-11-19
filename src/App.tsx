@@ -1,9 +1,11 @@
-import { Center, Loader, Title } from '@mantine/core';
+import { Anchor, Center, Loader, Stack, Text, ThemeIcon, Title } from '@mantine/core';
+import { IconLock } from '@tabler/icons-react';
 import { Suspense, useEffect } from 'react';
 import { ConfigProvider, useAppConfig } from './app-config/ConfigProvider';
 import { useAuth } from './auth/AuthProvider';
+import { CONTACT } from './branding';
 import { AppLayout } from './layout/AppLayout';
-import { useRoute } from './lib/router';
+import { hrefOf, useRoute } from './lib/router';
 import { useRunningTasks } from './lib/taskStore';
 import { AccessDeniedPage } from './pages/AccessDeniedPage';
 import { HomePage } from './pages/HomePage';
@@ -22,6 +24,22 @@ export default function App() {
     </ConfigProvider>
   );
 }
+
+/** Người không có quyền sửa Sheet cấu hình vào thẳng #/settings. */
+const NoPermission = () => (
+  <Stack align="center" ta="center" py={80} gap="sm">
+    <ThemeIcon size={56} radius="xl" variant="light" color="gray">
+      <IconLock size={28} />
+    </ThemeIcon>
+    <Title order={3}>Không có quyền xem cấu hình</Title>
+    <Text c="dimmed" size="sm" maw={420}>
+      Chỉ người có quyền chỉnh sửa Google Sheet cấu hình mới xem được trang này. {CONTACT} nếu bạn cần quyền.
+    </Text>
+    <Anchor href={hrefOf('home')} size="sm">
+      Về trang chủ
+    </Anchor>
+  </Stack>
+);
 
 const PageLoader = () => (
   <Center py={80}>
@@ -46,7 +64,7 @@ function useWarnBeforeUnload() {
 function SignedInApp() {
   useWarnBeforeUnload();
   const route = useRoute();
-  const { status, error } = useAppConfig();
+  const { status, error, canEditConfig } = useAppConfig();
   const tool = TOOLS.find((t) => t.id === route);
 
   /**
@@ -60,7 +78,7 @@ function SignedInApp() {
   let page;
   if (status === 'loading') page = <PageLoader />;
   else if (route === 'home') page = <HomePage />;
-  else if (route === 'settings') page = <SettingsPage />;
+  else if (route === 'settings') page = canEditConfig ? <SettingsPage /> : <NoPermission />;
   else if (tool)
     page = (
       <Suspense fallback={<PageLoader />}>

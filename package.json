@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "game-check": "node --env-file-if-exists=.env.local --env-file-if-exists=scripts/game-check/.env scripts/game-check/check-games.mjs"
   },
   "dependencies": {
     "@mantine/core": "^9.8.1",
@@ -26,6 +27,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "google-auth-library": "^11.3.4",
     "oxlint": "^1.90.0",
     "postcss": "^8.5.33",
     "postcss-preset-mantine": "^1.18.0",

@@ -126,3 +126,11 @@ body {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.4; transform: scale(0.8); }
 }
+
+/* ---------- Author credit ---------- */
+.author-name {
+  background: linear-gradient(135deg, var(--mantine-color-brand-5), var(--mantine-color-violet-5));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

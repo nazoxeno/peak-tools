@@ -2,6 +2,7 @@ import { Alert, Avatar, Button, Center, Group, Paper, Stack, Text, ThemeIcon, Ti
 import { IconLock, IconLogout, IconRefresh, IconSwitchHorizontal } from '@tabler/icons-react';
 import { useAppConfig } from '../app-config/ConfigProvider';
 import { useAuth } from '../auth/AuthProvider';
+import { CONTACT } from '../branding';
 
 /** Hiện khi tài khoản đã đăng nhập nhưng không đọc được Sheet cấu hình. */
 export function AccessDeniedPage() {
@@ -21,7 +22,7 @@ export function AccessDeniedPage() {
             <Title order={3}>{noAccess ? 'Bạn chưa có quyền truy cập' : 'Không thể tải ứng dụng'}</Title>
             <Text c="dimmed" size="sm" mt={6}>
               {noAccess
-                ? 'Tài khoản này chưa được cấp quyền sử dụng P.E.A.K Tools. Hãy liên hệ người quản lý để được thêm vào danh sách.'
+                ? `Tài khoản này chưa được cấp quyền sử dụng P.E.A.K Tools. ${CONTACT} để được thêm vào danh sách.`
                 : error?.message}
             </Text>
           </div>
