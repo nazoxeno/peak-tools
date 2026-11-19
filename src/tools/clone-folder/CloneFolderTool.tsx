@@ -99,7 +99,7 @@ export default function CloneFolderTool({ tool }: { tool: ToolDef }) {
                 </Text>
                 <Code>{sample}</Code>
                 <IconArrowRight size={14} color="var(--mantine-color-dimmed)" />
-                <Code color="teal.1">{preview}</Code>
+                <Code style={{ background: 'var(--mantine-color-teal-light)', color: 'var(--mantine-color-teal-light-color)' }}>{preview}</Code>
               </Group>
             </div>
 
