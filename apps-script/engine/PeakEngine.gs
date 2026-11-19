@@ -113,7 +113,6 @@ function artProcessFolderRecursive_(currentFolder, state) {
 
     var rowData = [];
     fileArray.forEach(function (f) {
-      var fileId = f.getId();
       var fileName = f.getName();
       var lastDot = fileName.lastIndexOf('.');
       var baseImageName = lastDot !== -1 ? fileName.substring(0, lastDot) : fileName;
@@ -131,19 +130,10 @@ function artProcessFolderRecursive_(currentFolder, state) {
         return;
       }
 
-      var dimensions = 'N/A';
-      var outputImageCell = 'Error/Too Large';
-      try {
-        var meta = Drive.Files.get(fileId, { fields: 'imageMediaMetadata' });
-        if (meta.imageMediaMetadata && meta.imageMediaMetadata.width) {
-          dimensions = meta.imageMediaMetadata.width + ' x ' + meta.imageMediaMetadata.height;
-        }
-        var blob = f.getBlob();
-        var dataUrl = 'data:' + blob.getContentType() + ';base64,' + Utilities.base64Encode(blob.getBytes());
-        outputImageCell = SpreadsheetApp.newCellImage().setSourceUrl(dataUrl).setAltTextTitle(fileName).build();
-      } catch (e) {
-        state.logs.push('⚠️ Không tạo được ảnh: ' + fileName + ' — ' + e.message);
-      }
+      var img = buildCellImage_(f);
+      if (img.error) state.logs.push('⚠️ Không tạo được ảnh: ' + fileName + ' — ' + img.error);
+      var dimensions = img.dimensions || 'N/A';
+      var outputImageCell = img.cell || 'Error/Too Large';
 
       rowData.push([
         state.globalCount++, typeVal, outputImageCell, folderLinkFormula, cellText, dimensions, 'DONE', 'Last updated: ' + uploadTime, ''
@@ -531,22 +521,44 @@ function animDemoMap_(demoFolder) {
 // DÙNG CHUNG
 // ===================================================================
 
+/** Ảnh có cạnh dài ≤ giá trị này (và file nhỏ) thì chèn ảnh gốc, lớn hơn thì dùng thumbnail. */
+var IMAGE_MAX_PX = 500;
+var IMAGE_MAX_BYTES = 1.5 * 1024 * 1024;
+
+/**
+ * Tạo ảnh in-cell. Ảnh nhỏ → giữ ảnh gốc (chính xác); ảnh lớn → thumbnail 500px của Drive
+ * (nhẹ hơn nhiều, tránh lỗi "Too Large" và chạy nhanh hơn).
+ * @return {{cell: (CellImage|null), dimensions: (string|null), error: (string|null)}}
+ */
+function buildCellImage_(driveFile) {
+  var result = { cell: null, dimensions: null, error: null };
+  try {
+    var meta = Drive.Files.get(driveFile.getId(), { fields: 'thumbnailLink,imageMediaMetadata(width,height)' });
+    var w = meta.imageMediaMetadata && meta.imageMediaMetadata.width;
+    var h = meta.imageMediaMetadata && meta.imageMediaMetadata.height;
+    if (w) result.dimensions = w + ' x ' + h;
+
+    var blob = null;
+    var isSmall = w && h && Math.max(w, h) <= IMAGE_MAX_PX && driveFile.getSize() <= IMAGE_MAX_BYTES;
+    if (!isSmall && meta.thumbnailLink) {
+      var res = UrlFetchApp.fetch(meta.thumbnailLink.replace(/=s\d+$/, '=s' + IMAGE_MAX_PX), { muteHttpExceptions: true });
+      if (res.getResponseCode() === 200) blob = res.getBlob();
+    }
+    if (!blob) blob = driveFile.getBlob();
+
+    var dataUrl = 'data:' + blob.getContentType() + ';base64,' + Utilities.base64Encode(blob.getBytes());
+    result.cell = SpreadsheetApp.newCellImage().setSourceUrl(dataUrl).setAltTextTitle(driveFile.getName()).build();
+  } catch (e) {
+    result.error = e.message;
+  }
+  return result;
+}
+
+/** Dùng cho Anim: trả về CellImage, '' nếu không có file, hoặc 'Error/Too Large'. */
 function getInCellImage_(driveFile) {
   if (!driveFile) return '';
-  try {
-    var finalBlob = null;
-    var meta = Drive.Files.get(driveFile.getId(), { fields: 'thumbnailLink' });
-    if (meta.thumbnailLink) {
-      var res = UrlFetchApp.fetch(meta.thumbnailLink.replace('=s220', '=s500'), { muteHttpExceptions: true });
-      if (res.getResponseCode() === 200) finalBlob = res.getBlob();
-    }
-    if (!finalBlob) finalBlob = driveFile.getBlob();
-
-    var dataUrl = 'data:' + finalBlob.getContentType() + ';base64,' + Utilities.base64Encode(finalBlob.getBytes());
-    return SpreadsheetApp.newCellImage().setSourceUrl(dataUrl).setAltTextTitle(driveFile.getName()).build();
-  } catch (e) {
-    return 'Error/Too Large';
-  }
+  var img = buildCellImage_(driveFile);
+  return img.cell || 'Error/Too Large';
 }
 
 function buildRichText_(fullText, textStyles) {
