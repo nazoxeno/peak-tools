@@ -672,3 +672,18 @@ body {
   color: var(--mantine-color-dimmed);
   flex-shrink: 0;
 }
+
+/* ---------- Phiên bản build (góc phải dưới) ---------- */
+.build-version {
+  position: fixed;
+  right: 12px;
+  bottom: 8px;
+  z-index: 50;
+  opacity: 0.55;
+  user-select: all;
+  transition: opacity 0.15s;
+}
+
+.build-version:hover {
+  opacity: 1;
+}

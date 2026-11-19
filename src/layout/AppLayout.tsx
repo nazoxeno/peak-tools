@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { useAppConfig } from '../app-config/ConfigProvider';
 import { useAuth } from '../auth/AuthProvider';
 import { AuthorCredit } from '../components/AuthorCredit';
+import { BuildVersion } from '../components/BuildVersion';
 import { ColorSchemeToggle } from '../components/ColorSchemeToggle';
 import { Logo } from '../components/Logo';
 import { SessionGuard } from '../components/SessionGuard';
@@ -109,7 +110,7 @@ export function AppLayout({ route, children }: { route: string; children: ReactN
           )}
           <UserMenu />
           <div style={{ marginTop: 10 }}>
-            <AuthorCredit showVersion />
+            <AuthorCredit />
           </div>
         </AppShell.Section>
       </AppShell.Navbar>
@@ -136,6 +137,7 @@ export function AppLayout({ route, children }: { route: string; children: ReactN
           {children}
         </div>
       </AppShell.Main>
+      <BuildVersion />
     </AppShell>
   );
 }
