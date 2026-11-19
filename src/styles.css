@@ -1,0 +1,128 @@
+:root {
+  --app-bg: #f6f7fb;
+  --app-surface: #ffffff;
+  --app-border: #e9ebf2;
+}
+
+:root[data-mantine-color-scheme='dark'] {
+  --app-bg: var(--mantine-color-dark-8);
+  --app-surface: var(--mantine-color-dark-7);
+  --app-border: var(--mantine-color-dark-5);
+}
+
+body {
+  background: var(--app-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Sidebar ---------- */
+.nav-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mantine-color-dimmed);
+  padding: 16px 12px 6px;
+}
+
+.nav-link {
+  border-radius: var(--mantine-radius-md);
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.user-card {
+  border: 1px solid var(--app-border);
+  border-radius: var(--mantine-radius-md);
+  padding: 8px 10px;
+  width: 100%;
+  transition: background 0.15s;
+}
+
+.user-card:hover {
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+}
+
+/* ---------- Home ---------- */
+.hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--mantine-radius-xl);
+  padding: 36px 32px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 85% 20%, rgba(255, 255, 255, 0.18), transparent 45%),
+    linear-gradient(135deg, var(--mantine-color-brand-6), var(--mantine-color-violet-6));
+}
+
+.tool-card {
+  text-decoration: none;
+  color: inherit;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.tool-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--mantine-shadow-md);
+  border-color: var(--mantine-color-brand-4);
+}
+
+.tool-card .tool-card-cta {
+  transition: transform 0.18s ease;
+}
+
+.tool-card:hover .tool-card-cta {
+  transform: translateX(4px);
+}
+
+/* ---------- Login ---------- */
+.login-brand {
+  color: #fff;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.16), transparent 40%),
+    radial-gradient(circle at 80% 90%, rgba(255, 255, 255, 0.12), transparent 45%),
+    linear-gradient(150deg, var(--mantine-color-brand-7), var(--mantine-color-violet-7));
+}
+
+/* ---------- Terminal ---------- */
+.terminal {
+  background: #15161c;
+  border: 1px solid #262833;
+  overflow: hidden;
+}
+
+.terminal-head {
+  background: #1d1f27;
+  border-bottom: 1px solid #262833;
+}
+
+.terminal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.terminal-line {
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 12.5px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mantine-color-green-5);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}

@@ -1,0 +1,84 @@
+<div class="header">
+  <h1>🔄 Drive Ownership</h1>
+  <p>Kiểm tra và chuyển quyền sở hữu toàn bộ File/Folder</p>
+</div>
+
+<div class="form-container">
+  <div class="form-group">
+    <label for="folderUrl">Folder Link (URL)</label>
+    <input type="text" id="folderUrl" placeholder="Nhập link thư mục Drive (e.g., https://drive.google.com/...)">
+  </div>
+
+  <div class="form-group">
+    <label for="email">New Owner's Email</label>
+    <input type="email" id="email" placeholder="e.g., owner@company.com">
+  </div>
+
+  <div class="button-group">
+    <button type="button" class="btn" id="checkBtn" onclick="checkOwnership()">🔍 Check Ownership</button>
+    <button type="button" class="btn btn-success" id="submitBtn" onclick="startTransfer()">🚀 Start Transfer</button>
+  </div>
+
+  <div id="status"></div>
+</div>
+
+<script>
+  function readOwnerForm() {
+    var folderUrl = document.getElementById('folderUrl').value.trim();
+    var email = document.getElementById('email').value.trim();
+    if (!folderUrl || !email) {
+      showMessage(document.getElementById('status'), 'error', 'Please fill in all required fields!');
+      return null;
+    }
+    return { folderUrl: folderUrl, email: email };
+  }
+
+  function setOwnerButtons(disabled) {
+    document.getElementById('submitBtn').disabled = disabled;
+    document.getElementById('checkBtn').disabled = disabled;
+  }
+
+  // === CHUYỂN QUYỀN ===
+  function startTransfer() {
+    var form = readOwnerForm();
+    if (!form) return;
+    var statusDiv = document.getElementById('status');
+
+    setOwnerButtons(true);
+    showLoading(statusDiv, '⏳ Processing transfer...');
+
+    TaskRunner.run({
+      fn: 'processTransfer',
+      args: [form.folderUrl, form.email],
+      tag: 'transfer',
+      onDone: function (response) {
+        setOwnerButtons(false);
+        showMessage(statusDiv, response.status === 'success' ? 'success' : 'error', response.message);
+      }
+    });
+  }
+
+  // === KIỂM TRA QUYỀN ===
+  function checkOwnership() {
+    var form = readOwnerForm();
+    if (!form) return;
+    var statusDiv = document.getElementById('status');
+
+    setOwnerButtons(true);
+    showLoading(statusDiv, '🔍 Scanning Google Drive data...');
+
+    TaskRunner.run({
+      fn: 'checkOwnershipStatus',
+      args: [form.folderUrl, form.email],
+      tag: 'check',
+      connectMsg: 'Connecting to server to scan files...',
+      onError: function (error) {
+        return { status: 'error', html: '<div class="msg msg-error">❌ System Error: ' + error.message + '</div>', logs: [] };
+      },
+      onDone: function (response) {
+        setOwnerButtons(false);
+        statusDiv.innerHTML = response.html;
+      }
+    });
+  }
+</script>

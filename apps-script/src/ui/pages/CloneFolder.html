@@ -1,0 +1,70 @@
+<div class="header">
+  <h1>📑 Clone Drive Folder</h1>
+  <p>Sao chép toàn bộ cấu trúc thư mục và tập tin con</p>
+</div>
+
+<div class="form-container">
+  <div class="form-group">
+    <label for="gameId">Game ID (Ví dụ: 1234)</label>
+    <input type="text" id="gameId" placeholder="Nhập Game ID...">
+  </div>
+
+  <div class="form-group">
+    <label for="gameName">Game Name (Ví dụ: ABC)</label>
+    <input type="text" id="gameName" placeholder="Nhập tên Game...">
+  </div>
+
+  <div class="form-group">
+    <label for="sourceLink">Link Source Folder (Folder mẫu để clone)</label>
+    <input type="text" id="sourceLink" placeholder="Paste link Source folder...">
+  </div>
+
+  <div class="form-group">
+    <label for="targetLink">Link Target Folder (Sẽ chứa folder clone)</label>
+    <input type="text" id="targetLink" placeholder="Paste link Target folder...">
+  </div>
+
+  <div class="button-group">
+    <button type="button" class="btn btn-success" id="btnClone" onclick="startClone()">🚀 Bắt Đầu Clone</button>
+  </div>
+
+  <div id="status"></div>
+</div>
+
+<script>
+  function startClone() {
+    var gameId = document.getElementById('gameId').value.trim();
+    var gameName = document.getElementById('gameName').value.trim();
+    var sourceLink = document.getElementById('sourceLink').value.trim();
+    var targetLink = document.getElementById('targetLink').value.trim();
+    var statusDiv = document.getElementById('status');
+    var btnClone = document.getElementById('btnClone');
+
+    if (!gameId || !gameName || !targetLink || !sourceLink) {
+      showMessage(statusDiv, 'error', 'Vui lòng điền đầy đủ các trường thông tin!');
+      return;
+    }
+
+    btnClone.disabled = true;
+    btnClone.innerHTML = '🚀 Đang xử lý...';
+    showLoading(statusDiv, '⏳ Đang tiến hành Clone. Tiến trình hiển thị ở góc phải màn hình...');
+
+    TaskRunner.run({
+      fn: 'processCloneFromForm',
+      args: [gameId, gameName, sourceLink, targetLink],
+      tag: 'clone',
+      onDone: function (response) {
+        btnClone.disabled = false;
+        btnClone.innerHTML = '🚀 Bắt Đầu Clone';
+
+        if (response.status === 'success') {
+          showMessage(statusDiv, 'success', 'Thành công! <br><br><a href="' + response.url + '" target="_blank" style="color: #1a73e8; text-decoration: underline;">👉 Bấm vào đây để mở thư mục mới</a>');
+          document.getElementById('gameId').value = '';
+          document.getElementById('gameName').value = '';
+        } else {
+          showMessage(statusDiv, 'error', response.message);
+        }
+      }
+    });
+  }
+</script>
