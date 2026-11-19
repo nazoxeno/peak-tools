@@ -11,7 +11,7 @@
  * Hàm kết thúc bằng dấu _ là hàm nội bộ (không gọi được từ web).
  */
 
-var ENGINE_VERSION = 1;
+var ENGINE_VERSION = 2;
 
 /** Web gọi để kiểm tra kết nối. */
 function ping() {
@@ -20,40 +20,122 @@ function ping() {
 
 // ===================================================================
 // ART CHECKLIST
+// Web gọi theo thứ tự: artPrepareTab → artProcessDir (lặp, mỗi lần ≤ N file) → artFinalizeTab
 // ===================================================================
 
+function artHeaders_(isPSD) {
+  return isPSD
+    ? ['No', 'Type', 'Folder', 'File Name', 'Status', 'Description/ Note']
+    : ['No', 'Type', 'Output Images', 'Folder', 'File Name', 'Dimensions', 'Status', 'Description/ Note', 'Demo'];
+}
+
 /**
- * Cập nhật 1 tab checklist từ 1 folder.
- * @param {{spreadsheetId:string, folderId:string, sheetName:string, isPSD:boolean,
- *          typeColors:Object, statusColors:Object}} p
+ * Bước 1: xoá & tạo lại tab, ghi dòng tiêu đề. Trả về state ban đầu.
+ * @param {{spreadsheetId:string, sheetName:string, isPSD:boolean}} p
  */
-function artProcessFolder(p) {
-  var logs = [];
+function artPrepareTab(p) {
   var ss = SpreadsheetApp.openById(p.spreadsheetId);
-  var folder = DriveApp.getFolderById(p.folderId);
   var sheet = artPrepareSheet_(ss, p.sheetName, p.isPSD);
+  sheet.appendRow(artHeaders_(p.isPSD));
+  return { currentRowIndex: 2, globalCount: 1, folderHeaderRows: [] };
+}
 
-  var state = {
-    sheet: sheet,
-    currentRowIndex: 2,
-    globalCount: 1,
-    folderHeaderRows: [],
-    hasSubFolders: folder.getFolders().hasNext(),
-    isPSD: p.isPSD,
-    headers: p.isPSD
-      ? ['No', 'Type', 'Folder', 'File Name', 'Status', 'Description/ Note']
-      : ['No', 'Type', 'Output Images', 'Folder', 'File Name', 'Dimensions', 'Status', 'Description/ Note', 'Demo'],
-    logs: logs
-  };
+/**
+ * Bước 2 (lặp): ghi các file [start, start+limit) của 1 folder.
+ * @param {{spreadsheetId:string, sheetName:string, isPSD:boolean, folderId:string,
+ *          start:number, limit:number, withFolderHeader:boolean, state:Object}} p
+ */
+function artProcessDir(p) {
+  var sheet = SpreadsheetApp.openById(p.spreadsheetId).getSheetByName(p.sheetName);
+  if (!sheet) throw new Error('Không tìm thấy tab "' + p.sheetName + '"');
+  var folder = DriveApp.getFolderById(p.folderId);
+  var headers = artHeaders_(p.isPSD);
+  var state = p.state;
+  var logs = [];
 
-  sheet.appendRow(state.headers);
-  artProcessFolderRecursive_(folder, state);
+  // Lọc & sắp xếp giống nhau ở mọi lần gọi để chia nhóm ổn định
+  var files = folder.getFiles();
+  var fileArray = [];
+  var fntMap = {};
+  while (files.hasNext()) {
+    var file = files.next();
+    var name = file.getName();
+    if (file.getMimeType().indexOf('image/') !== -1 || p.isPSD) {
+      fileArray.push(file);
+    } else if (name.toLowerCase().slice(-4) === '.fnt') {
+      fntMap[name.substring(0, name.lastIndexOf('.'))] = file;
+    }
+  }
+  fileArray.sort(function (a, b) { return sortAlphaNumeric_(a.getName(), b.getName()); });
+  var batch = fileArray.slice(p.start, p.start + p.limit);
+  if (batch.length === 0) return { state: state, logs: logs };
 
-  if (state.currentRowIndex > 2) {
-    artApplyFormatting_(sheet, state, p);
+  var folderName = folder.getName();
+  var folderLinkFormula = '=HYPERLINK("' + folder.getUrl() + '", "' + folderName + '")';
+
+  // Dòng tiêu đề folder (chỉ ở nhóm đầu tiên của folder)
+  if (p.withFolderHeader && p.start === 0) {
+    var emptyRow = new Array(headers.length).fill('');
+    emptyRow[1] = folderName;
+    sheet.getRange(state.currentRowIndex, 1, 1, headers.length).setValues([emptyRow]);
+    state.folderHeaderRows.push(state.currentRowIndex);
+    state.currentRowIndex++;
   }
 
-  return { rows: state.globalCount - 1, logs: logs };
+  var rowData = batch.map(function (f) {
+    var fileName = f.getName();
+    var lastDot = fileName.lastIndexOf('.');
+    var fntFile = fntMap[lastDot !== -1 ? fileName.substring(0, lastDot) : fileName];
+    var typeVal = p.isPSD ? 'PSD' : (fntFile ? 'Bitmap Font' : 'Static');
+    var uploadTime = Utilities.formatDate(f.getLastUpdated(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
+    var cellText = fntFile ? fileName + '\n' + fntFile.getName() : fileName;
+
+    if (p.isPSD) {
+      return [state.globalCount++, typeVal, folderLinkFormula, cellText, 'DONE', 'Last updated: ' + uploadTime];
+    }
+
+    var img = buildCellImage_(f);
+    if (img.error) logs.push('⚠️ ' + fileName + ': ' + img.error);
+    return [
+      state.globalCount++, typeVal, img.cell || 'Error/Too Large', folderLinkFormula, cellText,
+      img.dimensions || 'N/A', 'DONE', 'Last updated: ' + uploadTime, ''
+    ];
+  });
+
+  sheet.getRange(state.currentRowIndex, 1, rowData.length, headers.length).setValues(rowData);
+  state.currentRowIndex += rowData.length;
+  return { state: state, logs: logs };
+}
+
+/**
+ * Bước 3: định dạng tab (gọi cả khi bị dừng giữa chừng để phần đã ghi vẫn gọn gàng).
+ * @param {{spreadsheetId:string, sheetName:string, isPSD:boolean, state:Object,
+ *          typeColors:Object, statusColors:Object}} p
+ */
+function artFinalizeTab(p) {
+  var state = p.state;
+  if (state.currentRowIndex <= 2) return { ok: true };
+  var sheet = SpreadsheetApp.openById(p.spreadsheetId).getSheetByName(p.sheetName);
+  var headers = artHeaders_(p.isPSD);
+  var numRows = state.currentRowIndex - 2;
+
+  sheet.getRange(1, 1, state.currentRowIndex - 1, headers.length)
+    .setHorizontalAlignment('center')
+    .setVerticalAlignment('middle')
+    .setBorder(true, true, true, true, true, true);
+
+  sheet.setRowHeights(2, numRows, p.isPSD ? 40 : 150);
+  sheet.setRowHeight(1, 50);
+  sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#FFFF00');
+
+  applyDropdown_(sheet, sheet.getRange(2, 2, numRows, 1), p.typeColors, '#b4c6e7');
+  applyDropdown_(sheet, sheet.getRange(2, p.isPSD ? 5 : 7, numRows, 1), p.statusColors, '#c6e0b4');
+
+  var widths = p.isPSD ? [40, 70, 200, 300, 120, 300] : [40, 70, 250, 200, 300, 120, 70, 300, 250];
+  widths.forEach(function (w, i) { sheet.setColumnWidth(i + 1, w); });
+
+  formatFolderHeaderRows_(sheet, state.folderHeaderRows, headers.length);
+  return { ok: true };
 }
 
 function artPrepareSheet_(ss, sheetName, isPSD) {
@@ -61,6 +143,7 @@ function artPrepareSheet_(ss, sheetName, isPSD) {
   if (sheet) {
     sheet.clear();
     sheet.getDrawings().forEach(function (d) { d.remove(); });
+    sheet.getImages().forEach(function (img) { img.remove(); });
     sheet.setConditionalFormatRules([]);
     var maxRows = sheet.getMaxRows();
     var maxCols = sheet.getMaxColumns();
@@ -78,100 +161,6 @@ function artPrepareSheet_(ss, sheetName, isPSD) {
     ss.moveActiveSheet(1);
   }
   return sheet;
-}
-
-function artProcessFolderRecursive_(currentFolder, state) {
-  var files = currentFolder.getFiles();
-  var fileArray = [];
-  var fntMap = {};
-
-  while (files.hasNext()) {
-    var file = files.next();
-    var mimeType = file.getMimeType();
-    var name = file.getName();
-
-    if (mimeType.indexOf('image/') !== -1 || state.isPSD) {
-      fileArray.push(file);
-    } else if (name.toLowerCase().slice(-4) === '.fnt') {
-      fntMap[name.substring(0, name.lastIndexOf('.'))] = file;
-    }
-  }
-
-  if (fileArray.length > 0) {
-    var currentFolderName = currentFolder.getName();
-    state.logs.push('📁 ' + currentFolderName + ' — ' + fileArray.length + ' file');
-
-    if (state.hasSubFolders) {
-      var emptyRow = new Array(state.headers.length).fill('');
-      emptyRow[1] = currentFolderName;
-      state.sheet.getRange(state.currentRowIndex, 1, 1, state.headers.length).setValues([emptyRow]);
-      state.folderHeaderRows.push(state.currentRowIndex);
-      state.currentRowIndex++;
-    }
-
-    fileArray.sort(function (a, b) { return sortAlphaNumeric_(a.getName(), b.getName()); });
-
-    var rowData = [];
-    fileArray.forEach(function (f) {
-      var fileName = f.getName();
-      var lastDot = fileName.lastIndexOf('.');
-      var baseImageName = lastDot !== -1 ? fileName.substring(0, lastDot) : fileName;
-      var fntFile = fntMap[baseImageName];
-
-      var typeVal = state.isPSD ? 'PSD' : (fntFile ? 'Bitmap Font' : 'Static');
-      var folderLinkFormula = '=HYPERLINK("' + currentFolder.getUrl() + '", "' + currentFolderName + '")';
-      var uploadTime = Utilities.formatDate(f.getLastUpdated(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm:ss');
-
-      var cellText = fileName;
-      if (fntFile) cellText += '\n' + fntFile.getName();
-
-      if (state.isPSD) {
-        rowData.push([state.globalCount++, typeVal, folderLinkFormula, cellText, 'DONE', 'Last updated: ' + uploadTime]);
-        return;
-      }
-
-      var img = buildCellImage_(f);
-      if (img.error) state.logs.push('⚠️ Không tạo được ảnh: ' + fileName + ' — ' + img.error);
-      var dimensions = img.dimensions || 'N/A';
-      var outputImageCell = img.cell || 'Error/Too Large';
-
-      rowData.push([
-        state.globalCount++, typeVal, outputImageCell, folderLinkFormula, cellText, dimensions, 'DONE', 'Last updated: ' + uploadTime, ''
-      ]);
-    });
-
-    state.sheet.getRange(state.currentRowIndex, 1, rowData.length, state.headers.length).setValues(rowData);
-    state.currentRowIndex += rowData.length;
-  }
-
-  getSortedFolders_(currentFolder).forEach(function (sub) {
-    artProcessFolderRecursive_(sub, state);
-  });
-}
-
-function artApplyFormatting_(sheet, state, p) {
-  var headers = state.headers;
-  var isPSD = state.isPSD;
-  var numRows = state.currentRowIndex - 2;
-
-  sheet.getRange(1, 1, state.currentRowIndex - 1, headers.length)
-    .setHorizontalAlignment('center')
-    .setVerticalAlignment('middle')
-    .setBorder(true, true, true, true, true, true);
-
-  sheet.setRowHeights(2, numRows, isPSD ? 40 : 150);
-  sheet.setRowHeight(1, 50);
-  sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#FFFF00');
-
-  var typeRange = sheet.getRange(2, 2, numRows, 1);
-  var statusRange = sheet.getRange(2, isPSD ? 5 : 7, numRows, 1);
-  applyDropdown_(sheet, typeRange, p.typeColors, '#b4c6e7');
-  applyDropdown_(sheet, statusRange, p.statusColors, '#c6e0b4');
-
-  var widths = isPSD ? [40, 70, 200, 300, 120, 300] : [40, 70, 250, 200, 300, 120, 70, 300, 250];
-  widths.forEach(function (w, i) { sheet.setColumnWidth(i + 1, w); });
-
-  formatFolderHeaderRows_(sheet, state.folderHeaderRows, headers.length);
 }
 
 // ===================================================================
