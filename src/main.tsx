@@ -9,13 +9,13 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import { AuthProvider } from './auth/AuthProvider';
 import { printConsoleSignature } from './branding';
-import { theme } from './theme/theme';
+import { cssVariablesResolver, theme } from './theme/theme';
 
 printConsoleSignature();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <MantineProvider theme={theme} defaultColorScheme="auto">
+    <MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver} defaultColorScheme="auto">
       <Notifications position="top-right" />
       <AuthProvider>
         <App />

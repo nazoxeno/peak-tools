@@ -782,7 +782,7 @@ function Pipeline({ opts: o, isSeq, hasGif, frameCount, color }: { opts: ImageOp
       p="sm"
       style={{
         borderRadius: 8,
-        background: 'light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6))',
+        background: 'var(--app-subtle)',
       }}
     >
       <Text size="sm" c="dimmed" mr={4}>

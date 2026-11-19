@@ -1,18 +1,37 @@
 :root {
-  --app-bg: #f6f7fb;
-  --app-surface: #ffffff;
-  --app-border: #e9ebf2;
+  /* Nền app xám-lạnh nhẹ, card trắng ngà — tránh trắng tinh gây chói */
+  --app-bg: #f1f2f7;
+  --app-surface: #fcfcfe;
+  --app-border: #e2e4ee;
+  --app-subtle: #f5f6fa;
+  --app-checker-a: #e7e9f0;
+  --app-checker-b: #fcfcfe;
+  --app-hero-from: var(--mantine-color-brand-6);
+  --app-hero-to: var(--mantine-color-violet-6);
+  --app-accent-border: var(--mantine-color-brand-3);
 }
 
 :root[data-mantine-color-scheme='dark'] {
+  /* Xám ánh chàm, chênh nhau vừa đủ để phân lớp mà không gắt */
   --app-bg: var(--mantine-color-dark-8);
   --app-surface: var(--mantine-color-dark-7);
   --app-border: var(--mantine-color-dark-5);
+  --app-subtle: var(--mantine-color-dark-6);
+  --app-checker-a: #2c2f3e;
+  --app-checker-b: #353949;
+  --app-hero-from: #3d47b8;
+  --app-hero-to: #6a3fb0;
+  --app-accent-border: var(--mantine-color-brand-7);
 }
 
 body {
   background: var(--app-bg);
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+::selection {
+  background: light-dark(var(--mantine-color-brand-1), rgba(107, 117, 254, 0.35));
 }
 
 /* ---------- Sidebar ---------- */
@@ -40,7 +59,7 @@ body {
 }
 
 .user-card:hover {
-  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+  background: var(--app-subtle);
 }
 
 /* ---------- Home ---------- */
@@ -52,7 +71,7 @@ body {
   color: #fff;
   background:
     radial-gradient(circle at 85% 20%, rgba(255, 255, 255, 0.18), transparent 45%),
-    linear-gradient(135deg, var(--mantine-color-brand-6), var(--mantine-color-violet-6));
+    linear-gradient(135deg, var(--app-hero-from), var(--app-hero-to));
 }
 
 .tool-card {
@@ -67,7 +86,7 @@ body {
 .tool-card:hover {
   transform: translateY(-3px);
   box-shadow: var(--mantine-shadow-md);
-  border-color: var(--mantine-color-brand-4);
+  border-color: var(--app-accent-border);
 }
 
 .tool-card .tool-card-cta {
@@ -569,7 +588,7 @@ body {
 }
 
 .recent-chip:hover {
-  border-color: var(--mantine-color-brand-4);
+  border-color: var(--app-accent-border);
   transform: translateY(-1px);
 }
 
@@ -603,8 +622,8 @@ body {
 
 .file-dropzone:hover,
 .file-dropzone[data-dragging] {
-  border-color: var(--mantine-color-brand-4);
-  background: light-dark(var(--mantine-color-brand-0), var(--mantine-color-dark-6));
+  border-color: var(--app-accent-border);
+  background: light-dark(var(--mantine-color-brand-0), var(--app-subtle));
 }
 
 .file-dropzone[data-disabled] {
@@ -614,7 +633,7 @@ body {
 
 /* Nền ô cờ để thấy vùng trong suốt của ảnh */
 .checker-bg {
-  background: repeating-conic-gradient(#e9ecef 0 25%, #fff 0 50%) 50% / 12px 12px;
+  background: repeating-conic-gradient(var(--app-checker-a) 0 25%, var(--app-checker-b) 0 50%) 50% / 12px 12px;
 }
 
 /* ---------- Batch Image: cài đặt nhanh ---------- */
@@ -624,7 +643,7 @@ body {
 }
 
 .preset-card:hover {
-  border-color: var(--mantine-color-brand-4);
+  border-color: var(--app-accent-border);
   transform: translateY(-1px);
 }
 
