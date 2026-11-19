@@ -6,6 +6,7 @@ import { useAppConfig } from '../app-config/ConfigProvider';
 import { useAuth } from '../auth/AuthProvider';
 import { ColorSchemeToggle } from '../components/ColorSchemeToggle';
 import { Logo } from '../components/Logo';
+import { SessionGuard } from '../components/SessionGuard';
 import { hrefOf } from '../lib/router';
 import { TOOLS, toolsByCategory } from '../tools/registry';
 
@@ -99,6 +100,7 @@ export function AppLayout({ route, children }: { route: string; children: ReactN
 
       <AppShell.Main>
         <div style={{ maxWidth: 960, margin: '0 auto', padding: 'var(--mantine-spacing-md) var(--mantine-spacing-md) 64px' }}>
+          <SessionGuard />
           {configError && route !== 'settings' && (
             <Alert color="orange" variant="light" icon={<IconAlertTriangle />} mb="lg">
               {configError.message} Đang dùng cấu hình mặc định —{' '}

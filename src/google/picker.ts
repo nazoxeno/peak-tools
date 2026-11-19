@@ -3,7 +3,7 @@
  * Cần: VITE_GOOGLE_API_KEY + bật "Google Picker API" trong Cloud project.
  */
 import { ENV } from '../env';
-import { getAccessToken } from './client';
+import { ensureToken } from './client';
 import { FOLDER_MIME } from './drive';
 
 export type PickKind = 'folder' | 'spreadsheet';
@@ -75,11 +75,9 @@ function buildViews(kind: PickKind, query?: string): google.picker.DocsView[] {
  * @param query từ khoá tìm kiếm điền sẵn (vd "UI Checklist")
  */
 export async function pickFromDrive(kind: PickKind, title?: string, query?: string): Promise<PickedItem | null> {
-  const token = getAccessToken();
-  if (!token) throw new Error('Chưa đăng nhập Google.');
   if (!ENV.googleApiKey) throw new Error('Chưa cấu hình VITE_GOOGLE_API_KEY.');
 
-  await loadPickerLib();
+  const [token] = await Promise.all([ensureToken(), loadPickerLib()]);
   const P = google.picker;
 
   return new Promise((resolve, reject) => {
