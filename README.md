@@ -17,7 +17,7 @@ Repo **không** chứa ID hay email nội bộ:
 
 | Thông tin | Nằm ở đâu |
 |---|---|
-| `VITE_GOOGLE_CLIENT_ID`, `VITE_CONFIG_SHEET_ID`, `VITE_ORG_DOMAIN` | `.env.local` (local, không commit) · GitHub → Settings → Secrets and variables → Actions → **Variables** |
+| `VITE_GOOGLE_CLIENT_ID`, `VITE_CONFIG_SHEET_ID`, `VITE_ORG_DOMAIN`, `VITE_GOOGLE_API_KEY` | `.env.local` (local, không commit) · GitHub → Settings → Secrets and variables → Actions → **Variables** |
 | Email, template clone, phân quyền, màu dropdown | **Google Sheet cấu hình** (chỉ share trong công ty) — xem trang *Cấu hình* trong app |
 
 Lần đầu: để trống `VITE_CONFIG_SHEET_ID`, đăng nhập → trang **Cấu hình** → **Tạo Sheet mẫu** → copy ID vào biến môi trường.
@@ -40,8 +40,10 @@ src/
 └── tools/
     ├── registry.tsx       # Danh sách tool → sidebar, card Home, route
     ├── change-owner/
-    └── clone-folder/
-apps-script/               # Bản Apps Script cũ (tham khảo)
+    ├── clone-folder/
+    ├── art-checklist/     # cần Apps Script Engine
+    └── anim-checklist/    # cần Apps Script Engine
+apps-script/               # Apps Script Engine cho tool chèn ảnh vào Sheet — xem apps-script/README.md
 ```
 
 ## Thêm tool mới
@@ -53,4 +55,5 @@ apps-script/               # Bản Apps Script cũ (tham khảo)
 
 - OAuth consent screen: **Internal** (chỉ tài khoản trong tổ chức).
 - OAuth client (Web) — Authorized JavaScript origins: `http://localhost:5173` và domain GitHub Pages.
-- Đã bật Google Drive API và Google Sheets API.
+- Đã bật Google Drive API, Google Sheets API, Apps Script API, **Google Picker API**.
+- API key (cho nút chọn file Drive): Credentials → API key, giới hạn *Websites* = `http://localhost:5173/*`, `https://nazoxeno.github.io/*` và *API* = Google Picker API → đặt vào `VITE_GOOGLE_API_KEY`.

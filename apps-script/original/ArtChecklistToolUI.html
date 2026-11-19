@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 10px;
+      color: #333;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .field-label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    button.main-btn {
+      padding: 12px 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 16px;
+      font-weight: bold;
+      transition: 0.3s;
+      margin-bottom: 10px;
+    }
+
+    button.main-btn:hover {
+      background-color: #45a049;
+    }
+
+    button.main-btn:disabled {
+      background-color: #a5d6a7;
+      cursor: not-allowed;
+    }
+
+    /* Đổi màu riêng cho nút GET DATA để phân biệt với nút UPDATE */
+    button.btn-get {
+      background-color: #2196F3;
+    }
+
+    button.btn-get:hover {
+      background-color: #1976D2;
+    }
+
+    button.btn-get:disabled {
+      background-color: #90CAF9;
+    }
+
+    .action-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    button.action-btn {
+      padding: 8px 10px;
+      background-color: #f1f1f1;
+      color: #333;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 50%;
+      font-size: 13px;
+      font-weight: normal;
+      transition: 0.3s;
+    }
+
+    button.action-btn:hover {
+      background-color: #e0e0e0;
+    }
+
+    .box {
+      height: 180px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 4px;
+    }
+
+    label.check-label {
+      display: block;
+      margin-bottom: 8px;
+      cursor: pointer;
+      padding: 4px;
+      font-weight: normal;
+      font-size: 14px;
+    }
+
+    label.check-label:hover {
+      background: #f9f9f9;
+    }
+
+    #message {
+      margin-top: 15px;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .success {
+      color: green;
+      font-weight: bold;
+    }
+
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+
+    /* CSS cho biểu tượng loading */
+    .loader {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #4CAF50;
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    /* Đổi màu loader thành xanh dương khi dùng nút GET DATA */
+    .loader.blue {
+      border-top: 3px solid #2196F3;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="form-group">
+    <label class="field-label" for="folderUrl">Link UI Assets (Drive UI tổng)</label>
+    <input type="text" id="folderUrl" placeholder="Paste link Google Drive UI...">
+  </div>
+
+  <div class="form-group">
+    <label class="field-label" for="artSource">Link Art Source <span class="optional-text">(Drive PSD)</span></label>
+    <input type="text" id="artSource" placeholder="Paste link Google Drive PSD...">
+  </div>
+
+  <div class="form-group">
+    <label class="field-label" for="sheetUrl">Link Google Sheet Checklist</label>
+    <input type="text" id="sheetUrl" placeholder="Paste link Google Sheet...">
+  </div>
+
+  <button id="btn-get" class="main-btn btn-get" onclick="getData()">Get Data</button>
+
+  <div id="checklist-section" style="display:none; margin-top:15px;">
+    <label class="field-label">Chọn Folder (Tab) để cập nhật:</label>
+    <div class="action-group">
+      <button class="action-btn" onclick="selectAll()">✅ Chọn tất cả</button>
+      <button class="action-btn" onclick="deselectAll()">❌ Bỏ chọn tất cả</button>
+    </div>
+    <div class="box" id="checkbox-container"></div>
+    <button id="btn-run" class="main-btn" onclick="runUpdate()">Update Checklist</button>
+  </div>
+
+  <div id="message"></div>
+
+  <script>
+    function getData() {
+      var folderUrl = document.getElementById("folderUrl").value.trim();
+      var artSource = document.getElementById("artSource").value.trim();
+      var sheetUrl = document.getElementById("sheetUrl").value.trim();
+      var msgDiv = document.getElementById("message");
+      var btnGet = document.getElementById("btn-get");
+      
+      if((!folderUrl && !artSource) || !sheetUrl) { 
+        msgDiv.innerHTML = '<span class="error">Vui lòng điền ít nhất 1 link Folder/Art Source và link Sheet!</span>';
+        return; 
+      }
+      
+      // Chuyển UI sang trạng thái Đang quét
+      btnGet.disabled = true;
+      btnGet.innerHTML = 'Getting data...';
+      msgDiv.innerHTML = '<div class="loader blue"></div> <span>Đang quét danh sách, vui lòng chờ...</span>';
+      document.getElementById("checklist-section").style.display = "none";
+      
+      google.script.run
+        .withSuccessHandler(onGetSuccess)
+        .withFailureHandler(onGetFail)
+        .getSubFoldersFromUrl(folderUrl, artSource);
+    }
+    
+    function onGetSuccess(list) {
+      var btnGet = document.getElementById("btn-get");
+      btnGet.disabled = false;
+      btnGet.innerHTML = 'Get Data';
+      document.getElementById("message").innerHTML = '<span class="success">Lấy dữ liệu thành công!</span>';
+      
+      var html = "";
+      for(var i=0; i<list.length; i++) {
+        var displayName = list[i].replace(/^\d+_/, ""); 
+        html += '<label class="check-label"><input type="checkbox" name="sheetCheck" value="' + list[i] + '"> ' + displayName + '</label>';
+      }
+      
+      document.getElementById("checkbox-container").innerHTML = html;
+      document.getElementById("checklist-section").style.display = "block";
+    }
+    
+    function onGetFail(err) {
+      var btnGet = document.getElementById("btn-get");
+      btnGet.disabled = false;
+      btnGet.innerHTML = 'Get Data';
+      document.getElementById("message").innerHTML = '<span class="error">Lỗi: ' + err.message + '</span>';
+    }
+    
+    function selectAll() { 
+      var c = document.querySelectorAll("input[name=sheetCheck]"); 
+      for(var i=0; i<c.length; i++) c[i].checked = true; 
+    }
+    
+    function deselectAll() { 
+      var c = document.querySelectorAll("input[name=sheetCheck]"); 
+      for(var i=0; i<c.length; i++) c[i].checked = false; 
+    }
+    
+    function runUpdate() {
+      var folderUrl = document.getElementById("folderUrl").value.trim();
+      var artSource = document.getElementById("artSource").value.trim();
+      var sheetUrl = document.getElementById("sheetUrl").value.trim();
+      var checks = document.querySelectorAll("input[name=sheetCheck]:checked");
+      var selected = [];
+      var msgDiv = document.getElementById("message");
+      var btnRun = document.getElementById("btn-run");
+      var btnGet = document.getElementById("btn-get");
+      
+      for(var i=0; i<checks.length; i++) selected.push(checks[i].value);
+      
+      if(selected.length === 0) { 
+        msgDiv.innerHTML = '<span class="error">Vui lòng tích chọn ít nhất 1 tab!</span>';
+        return; 
+      }
+      
+      // Chuyển UI sang trạng thái Đang cập nhật
+      btnRun.disabled = true;
+      btnGet.disabled = true;
+      btnRun.innerHTML = 'Đang xử lý...';
+      msgDiv.innerHTML = '<div class="loader"></div> <span>Hệ thống đang chạy ngầm, vui lòng không tắt bảng này...</span>';
+      
+      google.script.run
+        .withSuccessHandler(onSuccess)
+        .withFailureHandler(onFail)
+        .executeCustomSheetsFromUi(folderUrl, artSource, sheetUrl, selected);
+    }
+    
+    function onSuccess() { 
+      document.getElementById("message").innerHTML = '<span class="success">Cập nhật thành công!</span>';
+      
+      // Mở khóa lại các nút sau khi thành công
+      var btnRun = document.getElementById("btn-run");
+      var btnGet = document.getElementById("btn-get");
+      
+      btnRun.disabled = false; 
+      btnGet.disabled = false; 
+      btnRun.innerHTML = 'Update Checklist';
+    }
+    
+    function onFail(err) { 
+      document.getElementById("message").innerHTML = '<span class="error">' + err.message + '</span>';
+      
+      // Mở khóa lại các nút sau khi thất bại
+      var btnRun = document.getElementById("btn-run");
+      var btnGet = document.getElementById("btn-get");
+      
+      btnRun.disabled = false; 
+      btnGet.disabled = false; 
+      btnRun.innerHTML = 'Update Checklist';
+    }
+  </script>
+</body>
+
+</html>

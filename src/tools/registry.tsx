@@ -1,4 +1,4 @@
-import { IconFolderShare, IconUserShare, type Icon } from '@tabler/icons-react';
+import { IconFolderShare, IconListCheck, IconMovie, IconUserShare, type Icon } from '@tabler/icons-react';
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
 
 /**
@@ -37,6 +37,24 @@ export const TOOLS: ToolDef[] = [
     color: 'teal',
     icon: IconFolderShare,
     component: lazy(() => import('./clone-folder/CloneFolderTool')),
+  },
+  {
+    id: 'art_checklist',
+    title: 'Art Checklist',
+    description: 'Quét folder UI/PSD trên Drive và cập nhật checklist kèm ảnh preview, kích thước, trạng thái.',
+    category: 'Google Sheets',
+    color: 'orange',
+    icon: IconListCheck,
+    component: lazy(() => import('./art-checklist/ArtChecklistTool')),
+  },
+  {
+    id: 'anim_checklist',
+    title: 'Anim Checklist',
+    description: 'Quét folder Animation (Spine/Cocos), liệt kê skin & animation, chèn ảnh demo vào checklist.',
+    category: 'Google Sheets',
+    color: 'grape',
+    icon: IconMovie,
+    component: lazy(() => import('./anim-checklist/AnimChecklistTool')),
   },
 ];
 

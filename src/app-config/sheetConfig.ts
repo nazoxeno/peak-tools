@@ -58,6 +58,7 @@ export async function loadConfigFromSheet(sheetId: string): Promise<AppConfig> {
         .filter((p) => p.emails.length > 0),
     },
     changeOwner: { defaultEmail: settings['changeOwner.defaultEmail'] ?? '' },
+    engine: { scriptId: settings['engine.scriptId'] ?? '' },
     typeColors: tabNames.has(TABS.typeColors) ? rowsToMap(tab(TABS.typeColors)) : d.typeColors,
     statusColors: tabNames.has(TABS.statusColors) ? rowsToMap(tab(TABS.statusColors)) : d.statusColors,
   };
@@ -81,6 +82,7 @@ export async function createConfigTemplate(shareDomain?: string) {
         ['clone.template.gameName', d.clone.template.gameName, SETTING_KEYS['clone.template.gameName']],
         ['clone.newOwnerEmail', '', SETTING_KEYS['clone.newOwnerEmail']],
         ['changeOwner.defaultEmail', '', SETTING_KEYS['changeOwner.defaultEmail']],
+        ['engine.scriptId', '', SETTING_KEYS['engine.scriptId']],
       ],
     },
     {

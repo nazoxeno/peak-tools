@@ -4,14 +4,13 @@ import {
   IconArrowRight,
   IconCircleCheck,
   IconExternalLink,
-  IconFolderOpen,
-  IconFolderSymlink,
   IconId,
   IconPlayerStop,
   IconRocket,
   IconTag,
 } from '@tabler/icons-react';
 import { useState } from 'react';
+import { DriveInput } from '../../components/DriveInput';
 import { LogPanel } from '../../components/LogPanel';
 import { ToolHeader } from '../../components/ToolHeader';
 import { useAppConfig } from '../../app-config/ConfigProvider';
@@ -31,8 +30,8 @@ export default function CloneFolderTool({ tool }: { tool: ToolDef }) {
   const { config } = useAppConfig();
   const { template } = config.clone;
 
-  const set = (key: keyof Form) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((f) => ({ ...f, [key]: e.currentTarget.value }));
+  const setVal = (key: keyof Form) => (value: string) => setForm((f) => ({ ...f, [key]: value }));
+  const set = (key: keyof Form) => (e: React.ChangeEvent<HTMLInputElement>) => setVal(key)(e.currentTarget.value);
 
   const sample = `${template.gameId}-${template.gameName}-01-Document`;
   const preview = renameFromTemplate(sample, template, form.gameId.trim() || '????', form.gameName.trim() || '????');
@@ -111,22 +110,22 @@ export default function CloneFolderTool({ tool }: { tool: ToolDef }) {
                 2. Thư mục
               </Text>
               <Stack gap="md">
-                <TextInput
+                <DriveInput
+                kind="folder"
                   label="Folder mẫu (source)"
                   placeholder="https://drive.google.com/drive/folders/..."
-                  leftSection={<IconFolderOpen size={18} />}
                   value={form.source}
-                  onChange={set('source')}
+                  onValueChange={setVal('source')}
                   error={errors.source}
                   disabled={task.running}
                 />
-                <TextInput
+                <DriveInput
+                kind="folder"
                   label="Folder đích (target)"
                   description="Bản clone sẽ được tạo bên trong folder này"
                   placeholder="https://drive.google.com/drive/folders/..."
-                  leftSection={<IconFolderSymlink size={18} />}
                   value={form.target}
-                  onChange={set('target')}
+                  onValueChange={setVal('target')}
                   error={errors.target}
                   disabled={task.running}
                 />

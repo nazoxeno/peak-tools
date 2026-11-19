@@ -107,6 +107,7 @@ export function SettingsPage() {
                 <Row k="Template Game Name" v={config.clone.template.gameName} />
                 <Row k="Tự chuyển owner cho" v={config.clone.newOwnerEmail || '—'} />
                 <Row k="Email mặc định (Ownership)" v={config.changeOwner.defaultEmail || '—'} />
+                <Row k="Engine Script ID" v={config.engine.scriptId ? `${config.engine.scriptId.slice(0, 12)}…` : '—'} />
               </Table.Tbody>
             </Table>
             <Text size="sm" fw={600} mt="md" mb={4}>

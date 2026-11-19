@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      padding: 20px;
+      color: #333;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .field-label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+      color: #2c3e50;
+    }
+
+    .optional-tag {
+      font-weight: normal;
+      font-size: 12px;
+      color: #7f8c8d;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      box-sizing: border-box;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    input[type="text"]:focus {
+      border-color: #3498db;
+      outline: none;
+    }
+
+    .main-btn {
+      width: 100%;
+      padding: 15px;
+      background-color: #27ae60;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+
+    .main-btn:hover {
+      background-color: #219150;
+    }
+
+    .main-btn:disabled {
+      background-color: #bdc3c7;
+      cursor: not-allowed;
+    }
+
+    #message {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .loader {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #27ae60;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 10px;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .success {
+      color: #27ae60;
+      font-weight: bold;
+    }
+
+    .error {
+      color: #e74c3c;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="form-group">
+    <label class="field-label">Google Drive Link (Animation Folder) <span class="optional-tag">- Optional if Demo is provided</span></label>
+    <input type="text" id="folderUrl" placeholder="Paste Animation folder link here...">
+  </div>
+
+  <div class="form-group">
+    <label class="field-label">Google Drive Link (Demo Folder) <span class="optional-tag">- Optional if Anim is provided</span></label>
+    <input type="text" id="demoUrl" placeholder="Paste Demo folder link here...">
+  </div>
+
+  <div class="form-group">
+    <label class="field-label">Google Sheet Checklist Link <span class="optional-tag">- Required</span></label>
+    <input type="text" id="sheetUrl" placeholder="Paste Google Sheet link here...">
+  </div>
+
+  <div class="form-group">
+    <label class="field-label" style="display: flex; align-items: center; cursor: pointer; font-weight: normal;">
+      <input type="checkbox" id="insertInCell" checked style="width: auto; margin-right: 10px; margin-bottom: 0;">
+      <span style="font-weight: bold;">Chèn ảnh Demo vào trong ô (In-cell)</span>
+    </label>
+    <div class="optional-tag" style="margin-left: 25px; margin-top: 4px;">
+      Bỏ chọn để chèn ảnh nổi (Over-cell) và tự động canh giữa ô.
+    </div>
+  </div>
+
+  <button id="btn-run" class="main-btn" onclick="startUpdate()">RUN UPDATE TOOL</button>
+
+  <div id="message"></div>
+
+  <script>
+    function startUpdate() {
+      var folderUrl = document.getElementById("folderUrl").value.trim();
+      var demoUrl = document.getElementById("demoUrl").value.trim();
+      var sheetUrl = document.getElementById("sheetUrl").value.trim();
+      var insertInCell = document.getElementById("insertInCell").checked;
+      var msgDiv = document.getElementById("message");
+      var btn = document.getElementById("btn-run");
+
+      if (!sheetUrl) {
+        msgDiv.innerHTML = '<span class="error">Please provide the Google Sheet link!</span>';
+        return;
+      }
+
+      if (!folderUrl && !demoUrl) {
+        msgDiv.innerHTML = '<span class="error">Please provide at least one folder link (Animation or Demo)!</span>';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = 'PROCESSING...';
+      msgDiv.innerHTML = '<div class="loader"></div> <span>Scanning folders and updating Sheet, please wait...</span>';
+
+      google.script.run
+        .withSuccessHandler(function (res) {
+          btn.disabled = false;
+          btn.innerHTML = 'RUN UPDATE TOOL';
+          msgDiv.innerHTML = '<span class="success">Source updated successfully!</span>';
+        })
+        .withFailureHandler(function (err) {
+          btn.disabled = false;
+          btn.innerHTML = 'RUN UPDATE TOOL';
+          msgDiv.innerHTML = '<span class="error">Error: ' + err.message + '</span>';
+        })
+        .processAnimationChecklist(folderUrl, sheetUrl, demoUrl, insertInCell);
+    }
+  </script>
+</body>
+
+</html>

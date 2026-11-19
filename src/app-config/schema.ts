@@ -17,6 +17,8 @@ export type AppConfig = {
     permissions: { suffix: string; emails: string[] }[];
   };
   changeOwner: { defaultEmail: string };
+  /** Apps Script engine (cho các tool cần chèn ảnh vào Sheet). */
+  engine: { scriptId: string };
   typeColors: Record<string, string>;
   statusColors: Record<string, string>;
 };
@@ -28,6 +30,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     permissions: [],
   },
   changeOwner: { defaultEmail: '' },
+  engine: { scriptId: '' },
   typeColors: {
     Static: '#fce8b2',
     Spine: '#9fc5e8',
@@ -59,6 +62,7 @@ export const SETTING_KEYS = {
   'clone.template.gameName': 'Tên game trong tên folder mẫu (sẽ được thay bằng Game Name mới)',
   'clone.newOwnerEmail': 'Để trống nếu không muốn tự chuyển owner sau khi clone',
   'changeOwner.defaultEmail': 'Email điền sẵn ở tool Drive Ownership',
+  'engine.scriptId': 'Script ID của PEAK Tools Engine (Apps Script) — dùng cho Art/Anim Checklist',
 } as const;
 
 export type SettingKey = keyof typeof SETTING_KEYS;

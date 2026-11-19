@@ -30,6 +30,7 @@ jobs:
           VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
           VITE_CONFIG_SHEET_ID: ${{ vars.VITE_CONFIG_SHEET_ID }}
           VITE_ORG_DOMAIN: ${{ vars.VITE_ORG_DOMAIN }}
+          VITE_GOOGLE_API_KEY: ${{ vars.VITE_GOOGLE_API_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

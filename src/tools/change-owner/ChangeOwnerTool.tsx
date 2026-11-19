@@ -4,13 +4,13 @@ import {
   IconAlertTriangle,
   IconAt,
   IconCircleCheck,
-  IconFolder,
   IconPlayerStop,
   IconRocket,
   IconSearch,
 } from '@tabler/icons-react';
 import { useState } from 'react';
 import { useAppConfig } from '../../app-config/ConfigProvider';
+import { DriveInput } from '../../components/DriveInput';
 import { LogPanel } from '../../components/LogPanel';
 import { StatCard } from '../../components/StatCard';
 import { ToolHeader } from '../../components/ToolHeader';
@@ -87,13 +87,13 @@ export default function ChangeOwnerTool({ tool }: { tool: ToolDef }) {
       <Stack gap="lg">
         <Card padding="xl">
           <Stack gap="md">
-            <TextInput
+            <DriveInput
+                kind="folder"
               label="Folder Drive"
               description="Dán link hoặc ID của folder cần kiểm tra"
               placeholder="https://drive.google.com/drive/folders/..."
-              leftSection={<IconFolder size={18} />}
               value={folderUrl}
-              onChange={(e) => setFolderUrl(e.currentTarget.value)}
+              onValueChange={setFolderUrl}
               error={errors.folder}
               disabled={task.running}
             />

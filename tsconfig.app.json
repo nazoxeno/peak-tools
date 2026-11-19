@@ -4,7 +4,7 @@
     "target": "es2023",
     "lib": ["ES2023", "DOM"],
     "module": "esnext",
-    "types": ["vite/client", "google.accounts", "gapi.client.drive-v3", "gapi.client.sheets-v4"],
+    "types": ["vite/client", "google.accounts", "gapi.client.drive-v3", "gapi.client.sheets-v4", "google.picker"],
     "allowArbitraryExtensions": true,
     "skipLibCheck": true,
 
