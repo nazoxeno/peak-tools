@@ -1,4 +1,4 @@
-import { Group, Text, Tooltip } from '@mantine/core';
+import { Group, Stack, Text, Tooltip } from '@mantine/core';
 import { IconHeartFilled } from '@tabler/icons-react';
 import { APP_VERSION, AUTHOR, BUILD_DATE } from '../branding';
 
@@ -7,24 +7,27 @@ export function AuthorCredit({ inverted = false, showVersion = false }: { invert
   const muted = inverted ? 'rgba(255,255,255,.65)' : 'dimmed';
 
   return (
-    <Group gap={4} justify="center" wrap="nowrap">
-      <Text size="xs" c={muted}>
-        Crafted with
-      </Text>
-      <IconHeartFilled size={12} color="var(--mantine-color-pink-5)" />
-      <Text size="xs" c={muted}>
-        by
-      </Text>
-      <Text size="xs" fw={700} className={inverted ? undefined : 'author-name'} c={inverted ? 'white' : undefined}>
-        {AUTHOR}
-      </Text>
+    <Stack gap={2} align="center">
+      {/* nowrap: không để chữ tự bẻ dòng giữa chừng khi khung hẹp (vd sidebar) */}
+      <Group gap={4} justify="center" wrap="nowrap" style={{ whiteSpace: 'nowrap' }}>
+        <Text size="xs" c={muted}>
+          Crafted with
+        </Text>
+        <IconHeartFilled size={12} color="var(--mantine-color-pink-5)" style={{ flexShrink: 0 }} />
+        <Text size="xs" c={muted}>
+          by
+        </Text>
+        <Text size="xs" fw={700} className={inverted ? undefined : 'author-name'} c={inverted ? 'white' : undefined}>
+          {AUTHOR}
+        </Text>
+      </Group>
       {showVersion && (
         <Tooltip label={`Build ${BUILD_DATE}`}>
-          <Text size="xs" c={muted} ff="monospace" ml={4}>
-            · {APP_VERSION}
+          <Text size="xs" c={muted} ff="monospace" opacity={0.8}>
+            {APP_VERSION}
           </Text>
         </Tooltip>
       )}
-    </Group>
+    </Stack>
   );
 }
