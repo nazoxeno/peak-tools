@@ -15,23 +15,25 @@ import { LogPanel } from '../../components/LogPanel';
 import { StatCard } from '../../components/StatCard';
 import { ToolHeader } from '../../components/ToolHeader';
 import { extractId } from '../../google/drive';
-import { useTask } from '../../lib/useTask';
+import { useTask } from '../../lib/taskStore';
+import { useSessionState } from '../../lib/useSessionState';
 import type { ToolDef } from '../registry';
 import { checkOwnership, transferFolderOwnership, type OwnershipReport } from './changeOwner';
 
 type Result =
   | { kind: 'check'; email: string; report: OwnershipReport }
-  | { kind: 'transfer'; email: string; transferred: number; skipped: number; failed: number }
-  | null;
+  | { kind: 'transfer'; email: string; transferred: number; skipped: number; failed: number };
 
 export default function ChangeOwnerTool({ tool }: { tool: ToolDef }) {
-  const [folderUrl, setFolderUrl] = useState('');
   const { config } = useAppConfig();
-  const [email, setEmail] = useState(config.changeOwner.defaultEmail);
+  // Lưu theo tab trình duyệt: chuyển trang rồi quay lại vẫn còn
+  const [folderUrl, setFolderUrl] = useSessionState(`${tool.id}.folder`, '');
+  const [email, setEmail] = useSessionState(`${tool.id}.email`, config.changeOwner.defaultEmail);
   const [errors, setErrors] = useState<{ folder?: string; email?: string }>({});
   const [confirming, setConfirming] = useState(false);
-  const [result, setResult] = useState<Result>(null);
-  const task = useTask();
+  // Tác vụ + kết quả nằm trong store chung → không mất khi chuyển trang
+  const task = useTask<Result>(tool.id);
+  const result = task.result;
 
   function validate() {
     const folderId = extractId(folderUrl);
@@ -46,11 +48,14 @@ export default function ChangeOwnerTool({ tool }: { tool: ToolDef }) {
   async function onCheck() {
     const folderId = validate();
     if (!folderId) return;
-    setResult(null);
     const target = email.trim();
-    const report = await task.run((ctx) => checkOwnership(folderId, target, ctx));
-    if (!report) return;
-    setResult({ kind: 'check', email: target, report });
+    const res = await task.run(async (ctx) => ({
+      kind: 'check',
+      email: target,
+      report: await checkOwnership(folderId, target, ctx),
+    }));
+    if (res?.kind !== 'check') return;
+    const { report } = res;
     notifications.show({
       color: report.mismatches.length ? 'orange' : 'green',
       title: 'Kiểm tra xong',
@@ -68,11 +73,13 @@ export default function ChangeOwnerTool({ tool }: { tool: ToolDef }) {
     setConfirming(false);
     const folderId = validate();
     if (!folderId) return;
-    setResult(null);
     const target = email.trim();
-    const res = await task.run((ctx) => transferFolderOwnership(folderId, target, ctx));
-    if (!res) return;
-    setResult({ kind: 'transfer', email: target, ...res });
+    const res = await task.run(async (ctx) => ({
+      kind: 'transfer',
+      email: target,
+      ...(await transferFolderOwnership(folderId, target, ctx)),
+    }));
+    if (res?.kind !== 'transfer') return;
     notifications.show({
       color: res.failed ? 'orange' : 'green',
       title: 'Chuyển owner hoàn tất',
@@ -148,7 +155,7 @@ export default function ChangeOwnerTool({ tool }: { tool: ToolDef }) {
   );
 }
 
-function ResultView({ result }: { result: NonNullable<Result> }) {
+function ResultView({ result }: { result: Result }) {
   if (result.kind === 'transfer') {
     return (
       <SimpleGrid cols={{ base: 1, xs: 3 }}>

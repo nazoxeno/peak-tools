@@ -1,4 +1,4 @@
-import type { Logger } from '../lib/useTask';
+import type { Logger } from '../lib/taskStore';
 
 /** Đẩy log trả về từ Engine vào live log (dòng bắt đầu bằng ⚠️ là cảnh báo). */
 export function pipeEngineLogs(lines: string[] | undefined, log: Logger, indent = '   ') {

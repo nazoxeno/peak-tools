@@ -1,7 +1,7 @@
 import type { AppConfig } from '../../app-config/schema';
 import { runEngine } from '../../google/appsScript';
 import { isFolder, listChildren, sortByName } from '../../google/drive';
-import type { TaskContext } from '../../lib/useTask';
+import type { TaskContext } from '../../lib/taskStore';
 import { pipeEngineLogs } from '../engineLogs';
 
 type AnimState = { currentRow: number; countNo: number; folderHeaderRows: number[] };

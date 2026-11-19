@@ -13,7 +13,8 @@ import { DriveInput } from '../../components/DriveInput';
 import { LogPanel } from '../../components/LogPanel';
 import { ToolHeader } from '../../components/ToolHeader';
 import { extractId } from '../../google/drive';
-import { useTask } from '../../lib/useTask';
+import { useTask } from '../../lib/taskStore';
+import { useSessionState } from '../../lib/useSessionState';
 import type { ToolDef } from '../registry';
 import { runAnimChecklist } from './animChecklist';
 
@@ -21,11 +22,12 @@ type Form = { anim: string; demo: string; sheet: string };
 
 export default function AnimChecklistTool({ tool }: { tool: ToolDef }) {
   const { config } = useAppConfig();
-  const [form, setForm] = useState<Form>({ anim: '', demo: '', sheet: '' });
-  const [insertInCell, setInsertInCell] = useState(true);
+  // Lưu theo tab trình duyệt: chuyển trang rồi quay lại vẫn còn
+  const [form, setForm] = useSessionState<Form>(`${tool.id}.form`, { anim: '', demo: '', sheet: '' });
+  const [insertInCell, setInsertInCell] = useSessionState(`${tool.id}.inCell`, true);
   const [errors, setErrors] = useState<Partial<Record<keyof Form, string>>>({});
-  const [doneUrl, setDoneUrl] = useState<string | null>(null);
-  const task = useTask();
+  const task = useTask<{ rows: number; demoMatched: number; sheetUrl: string }>(tool.id);
+  const doneUrl = task.result?.sheetUrl ?? null;
 
   const setVal = (key: keyof Form) => (value: string) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -40,15 +42,14 @@ export default function AnimChecklistTool({ tool }: { tool: ToolDef }) {
     setErrors(next);
     if (Object.values(next).some(Boolean)) return;
 
-    setDoneUrl(null);
-    const res = await task.run((ctx) =>
-      runAnimChecklist(
+    const res = await task.run(async (ctx) => ({
+      ...(await runAnimChecklist(
         { spreadsheetId: ids.sheet!, animFolderId: ids.anim, demoFolderId: ids.demo, insertInCell, config },
         ctx,
-      ),
-    );
+      )),
+      sheetUrl: `https://docs.google.com/spreadsheets/d/${ids.sheet}/edit`,
+    }));
     if (!res) return;
-    setDoneUrl(`https://docs.google.com/spreadsheets/d/${ids.sheet}/edit`);
     notifications.show({
       color: 'green',
       title: 'Cập nhật Anim checklist xong',

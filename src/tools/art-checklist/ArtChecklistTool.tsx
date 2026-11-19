@@ -14,7 +14,8 @@ import { DriveInput } from '../../components/DriveInput';
 import { LogPanel } from '../../components/LogPanel';
 import { ToolHeader } from '../../components/ToolHeader';
 import { extractId } from '../../google/drive';
-import { useTask } from '../../lib/useTask';
+import { useTask } from '../../lib/taskStore';
+import { useSessionState } from '../../lib/useSessionState';
 import type { ToolDef } from '../registry';
 import { listArtTabs, runArtChecklist, type ArtTab } from './artChecklist';
 
@@ -22,14 +23,15 @@ type Form = { uiFolder: string; artSource: string; sheet: string };
 
 export default function ArtChecklistTool({ tool }: { tool: ToolDef }) {
   const { config } = useAppConfig();
-  const [form, setForm] = useState<Form>({ uiFolder: '', artSource: '', sheet: '' });
+  // Lưu theo tab trình duyệt: chuyển trang rồi quay lại vẫn còn
+  const [form, setForm] = useSessionState<Form>(`${tool.id}.form`, { uiFolder: '', artSource: '', sheet: '' });
+  const [tabs, setTabs] = useSessionState<ArtTab[] | null>(`${tool.id}.tabs`, null);
+  const [selected, setSelected] = useSessionState<string[]>(`${tool.id}.selected`, []);
   const [errors, setErrors] = useState<Partial<Record<keyof Form, string>>>({});
-  const [tabs, setTabs] = useState<ArtTab[] | null>(null);
-  const [selected, setSelected] = useState<string[]>([]);
   const [loadingTabs, setLoadingTabs] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
-  const [doneUrl, setDoneUrl] = useState<string | null>(null);
-  const task = useTask();
+  const task = useTask<{ ok: number; failed: number; sheetUrl: string }>(tool.id);
+  const doneUrl = task.result?.sheetUrl ?? null;
   const busy = task.running || loadingTabs;
 
   const setVal = (key: keyof Form) => (value: string) => {
@@ -58,7 +60,7 @@ export default function ArtChecklistTool({ tool }: { tool: ToolDef }) {
     if (!ids) return;
     setLoadingTabs(true);
     setListError(null);
-    setDoneUrl(null);
+    task.clearResult();
     try {
       const list = await listArtTabs(ids.ui, ids.art);
       setTabs(list);
@@ -76,10 +78,11 @@ export default function ArtChecklistTool({ tool }: { tool: ToolDef }) {
     if (!ids || !tabs) return;
     const chosen = tabs.filter((t) => selected.includes(t.folderId));
     if (chosen.length === 0) return;
-    setDoneUrl(null);
-    const res = await task.run((ctx) => runArtChecklist({ spreadsheetId: ids.sheet!, tabs: chosen, config }, ctx));
+    const res = await task.run(async (ctx) => ({
+      ...(await runArtChecklist({ spreadsheetId: ids.sheet!, tabs: chosen, config }, ctx)),
+      sheetUrl: `https://docs.google.com/spreadsheets/d/${ids.sheet}/edit`,
+    }));
     if (!res) return;
-    setDoneUrl(`https://docs.google.com/spreadsheets/d/${ids.sheet}/edit`);
     notifications.show({
       color: res.failed ? 'orange' : 'green',
       title: 'Cập nhật checklist xong',

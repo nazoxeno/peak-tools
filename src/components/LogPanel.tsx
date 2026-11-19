@@ -1,7 +1,7 @@
 import { ActionIcon, CopyButton, Group, ScrollArea, Text, Tooltip } from '@mantine/core';
 import { IconCheck, IconCopy } from '@tabler/icons-react';
 import { useEffect, useRef } from 'react';
-import type { LogEntry, LogLevel } from '../lib/useTask';
+import type { LogEntry, LogLevel } from '../lib/taskStore';
 
 const COLORS: Record<LogLevel, string> = {
   info: '#c9cbd6',

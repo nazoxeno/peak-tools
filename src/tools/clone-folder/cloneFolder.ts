@@ -10,7 +10,7 @@ import {
   transferOwnership,
   type DriveFile,
 } from '../../google/drive';
-import type { TaskContext } from '../../lib/useTask';
+import type { TaskContext } from '../../lib/taskStore';
 
 type CloneConfig = AppConfig['clone'];
 

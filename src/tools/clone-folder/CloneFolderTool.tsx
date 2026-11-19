@@ -15,7 +15,8 @@ import { LogPanel } from '../../components/LogPanel';
 import { ToolHeader } from '../../components/ToolHeader';
 import { useAppConfig } from '../../app-config/ConfigProvider';
 import { extractId } from '../../google/drive';
-import { useTask } from '../../lib/useTask';
+import { useTask } from '../../lib/taskStore';
+import { useSessionState } from '../../lib/useSessionState';
 import type { ToolDef } from '../registry';
 import { cloneFolder, renameFromTemplate } from './cloneFolder';
 
@@ -23,10 +24,10 @@ type Form = { gameId: string; gameName: string; source: string; target: string }
 type Errors = Partial<Record<keyof Form, string>>;
 
 export default function CloneFolderTool({ tool }: { tool: ToolDef }) {
-  const [form, setForm] = useState<Form>({ gameId: '', gameName: '', source: '', target: '' });
+  const [form, setForm] = useSessionState<Form>(`${tool.id}.form`, { gameId: '', gameName: '', source: '', target: '' });
   const [errors, setErrors] = useState<Errors>({});
-  const [result, setResult] = useState<{ url: string; files: number; folders: number } | null>(null);
-  const task = useTask();
+  const task = useTask<{ url: string; files: number; folders: number }>(tool.id);
+  const result = task.result;
   const { config } = useAppConfig();
   const { template } = config.clone;
 
@@ -48,12 +49,10 @@ export default function CloneFolderTool({ tool }: { tool: ToolDef }) {
     setErrors(next);
     if (Object.values(next).some(Boolean) || !sourceFolderId || !targetParentId) return;
 
-    setResult(null);
     const res = await task.run((ctx) =>
       cloneFolder({ config: config.clone, gameId: form.gameId.trim(), gameName: form.gameName.trim(), sourceFolderId, targetParentId }, ctx),
     );
     if (!res) return;
-    setResult(res);
     setForm((f) => ({ ...f, gameId: '', gameName: '' }));
     notifications.show({
       color: 'green',

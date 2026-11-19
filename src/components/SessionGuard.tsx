@@ -1,6 +1,7 @@
 import { Alert, Button, Group, Modal, Stack, Text, ThemeIcon } from '@mantine/core';
 import { IconClockExclamation, IconRefresh } from '@tabler/icons-react';
 import { useAuth } from '../auth/AuthProvider';
+import { useRunningTasks } from '../lib/taskStore';
 
 /**
  * - Sắp hết hạn: banner nhỏ gợi ý gia hạn.
@@ -8,6 +9,7 @@ import { useAuth } from '../auth/AuthProvider';
  */
 export function SessionGuard() {
   const { reauth, renewSession, signOut, user, error } = useAuth();
+  const running = useRunningTasks();
 
   return (
     <>
@@ -15,7 +17,7 @@ export function SessionGuard() {
         <Alert color="yellow" variant="light" icon={<IconClockExclamation />} mb="lg">
           <Group justify="space-between" gap="sm" wrap="wrap">
             <Text size="sm">
-              Phiên đăng nhập sẽ hết hạn sau vài phút — tác vụ đang chạy sẽ tạm dừng nếu chưa gia hạn.
+              Phiên đăng nhập sẽ hết hạn sau vài phút{running.length ? ' — tác vụ đang chạy sẽ tạm dừng nếu chưa gia hạn' : ''}.
             </Text>
             <Button size="xs" variant="light" color="yellow" leftSection={<IconRefresh size={14} />} onClick={renewSession}>
               Gia hạn ngay
@@ -42,7 +44,9 @@ export function SessionGuard() {
               Phiên đăng nhập đã hết hạn
             </Text>
             <Text c="dimmed" size="sm" mt={4}>
-              Tác vụ đang chạy (nếu có) được tạm dừng. Gia hạn để tiếp tục từ chỗ đang dừng.
+              {running.length
+                ? 'Tác vụ đang được tạm dừng. Gia hạn để tiếp tục chạy từ chỗ đang dừng.'
+                : 'Gia hạn để tiếp tục sử dụng.'}
             </Text>
             <Text size="xs" c="dimmed" mt={6}>
               Tài khoản: {user?.emailAddress}

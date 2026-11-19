@@ -1,4 +1,4 @@
-import { Alert, Anchor, AppShell, Avatar, Burger, Group, Menu, NavLink, ScrollArea, Text, UnstyledButton } from '@mantine/core';
+import { Alert, Anchor, AppShell, Avatar, Burger, Group, Loader, Menu, NavLink, ScrollArea, Text, Tooltip, UnstyledButton } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconAlertTriangle, IconHome, IconLogout, IconSelector, IconSettings, IconSwitchHorizontal } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
@@ -7,6 +7,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { ColorSchemeToggle } from '../components/ColorSchemeToggle';
 import { Logo } from '../components/Logo';
 import { SessionGuard } from '../components/SessionGuard';
+import { useRunningTasks } from '../lib/taskStore';
 import { hrefOf } from '../lib/router';
 import { TOOLS, toolsByCategory } from '../tools/registry';
 
@@ -15,6 +16,7 @@ export function AppLayout({ route, children }: { route: string; children: ReactN
   const [opened, { toggle, close }] = useDisclosure();
   const current = TOOLS.find((t) => t.id === route);
   const { error: configError } = useAppConfig();
+  const running = useRunningTasks();
 
   return (
     <AppShell
@@ -76,6 +78,13 @@ export function AppLayout({ route, children }: { route: string; children: ReactN
                   href={hrefOf(t.id)}
                   label={t.title}
                   leftSection={<t.icon size={18} stroke={1.7} />}
+                  rightSection={
+                    running.includes(t.id) ? (
+                      <Tooltip label="Đang chạy">
+                        <Loader size={12} />
+                      </Tooltip>
+                    ) : undefined
+                  }
                   active={route === t.id}
                   onClick={close}
                 />
@@ -119,6 +128,8 @@ export function AppLayout({ route, children }: { route: string; children: ReactN
 
 function UserMenu() {
   const { user, signIn, signOut } = useAuth();
+  // Đổi tài khoản / đăng xuất khi đang chạy tác vụ sẽ làm hỏng tác vụ → khoá lại
+  const busy = useRunningTasks().length > 0;
 
   return (
     <Menu position="top-start" width="target" withinPortal>
@@ -141,10 +152,11 @@ function UserMenu() {
         </UnstyledButton>
       </Menu.Target>
       <Menu.Dropdown>
-        <Menu.Item leftSection={<IconSwitchHorizontal size={16} />} onClick={signIn}>
+        {busy && <Menu.Label>Đang có tác vụ chạy — chờ xong hoặc bấm Dừng</Menu.Label>}
+        <Menu.Item leftSection={<IconSwitchHorizontal size={16} />} onClick={signIn} disabled={busy}>
           Đổi tài khoản
         </Menu.Item>
-        <Menu.Item leftSection={<IconLogout size={16} />} color="red" onClick={signOut}>
+        <Menu.Item leftSection={<IconLogout size={16} />} color="red" onClick={signOut} disabled={busy}>
           Đăng xuất
         </Menu.Item>
       </Menu.Dropdown>

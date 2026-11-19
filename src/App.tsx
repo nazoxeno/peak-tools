@@ -1,9 +1,10 @@
 import { Center, Loader, Title } from '@mantine/core';
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { ConfigProvider, useAppConfig } from './app-config/ConfigProvider';
 import { useAuth } from './auth/AuthProvider';
 import { AppLayout } from './layout/AppLayout';
 import { useRoute } from './lib/router';
+import { useRunningTasks } from './lib/taskStore';
 import { AccessDeniedPage } from './pages/AccessDeniedPage';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
@@ -28,7 +29,22 @@ const PageLoader = () => (
   </Center>
 );
 
+/** Cảnh báo của trình duyệt khi đóng/tải lại tab lúc đang có tác vụ chạy. */
+function useWarnBeforeUnload() {
+  const running = useRunningTasks().length > 0;
+  useEffect(() => {
+    if (!running) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [running]);
+}
+
 function SignedInApp() {
+  useWarnBeforeUnload();
   const route = useRoute();
   const { status, error } = useAppConfig();
   const tool = TOOLS.find((t) => t.id === route);
