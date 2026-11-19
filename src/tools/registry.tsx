@@ -1,4 +1,4 @@
-import { IconFolderShare, IconListCheck, IconMovie, IconUserShare, type Icon } from '@tabler/icons-react';
+import { IconBone, IconFolderShare, IconListCheck, IconMovie, IconUserShare, type Icon } from '@tabler/icons-react';
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
 
 /**
@@ -12,10 +12,12 @@ export type ToolDef = {
   id: string;
   title: string;
   description: string;
-  category: 'Google Drive' | 'Google Sheets';
+  category: 'Google Drive' | 'Google Sheets' | 'Preview';
   /** Màu Mantine cho icon/badge, vd 'brand', 'teal', 'orange' */
   color: string;
   icon: Icon;
+  /** Hiển thị toàn chiều rộng (vd tool nhúng trang khác), thay vì khung 960px */
+  fullWidth?: boolean;
   component: LazyExoticComponent<ComponentType<{ tool: ToolDef }>>;
 };
 
@@ -55,6 +57,16 @@ export const TOOLS: ToolDef[] = [
     color: 'grape',
     icon: IconMovie,
     component: lazy(() => import('./anim-checklist/AnimChecklistTool')),
+  },
+  {
+    id: 'spine_review',
+    title: 'Spine Review',
+    description: 'Xem trước animation Spine ngay trong trình duyệt.',
+    category: 'Preview',
+    color: 'pink',
+    icon: IconBone,
+    fullWidth: true,
+    component: lazy(() => import('./spine-review/SpineReviewTool')),
   },
 ];
 

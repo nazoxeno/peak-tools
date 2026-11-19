@@ -108,7 +108,7 @@ export function AppLayout({ route, children }: { route: string; children: ReactN
       </AppShell.Navbar>
 
       <AppShell.Main>
-        <div style={{ maxWidth: 960, margin: '0 auto', padding: 'var(--mantine-spacing-md) var(--mantine-spacing-md) 64px' }}>
+        <div style={{ maxWidth: current?.fullWidth ? '100%' : 960, margin: '0 auto', padding: 'var(--mantine-spacing-md) var(--mantine-spacing-md) 64px' }}>
           <SessionGuard />
           {configError && route !== 'settings' && (
             <Alert color="orange" variant="light" icon={<IconAlertTriangle />} mb="lg">
