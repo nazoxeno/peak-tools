@@ -1,4 +1,4 @@
-import { IconBone, IconFolderShare, IconListCheck, IconMovie, IconUserShare, type Icon } from '@tabler/icons-react';
+import { IconBone, IconDeviceGamepad2, IconFolderShare, IconListCheck, IconMovie, IconUserShare, type Icon } from '@tabler/icons-react';
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
 
 /**
@@ -12,7 +12,7 @@ export type ToolDef = {
   id: string;
   title: string;
   description: string;
-  category: 'Google Drive' | 'Google Sheets' | 'Preview';
+  category: 'Google Drive' | 'Google Sheets' | 'Game' | 'Preview';
   /** Màu Mantine cho icon/badge, vd 'brand', 'teal', 'orange' */
   color: string;
   icon: Icon;
@@ -57,6 +57,15 @@ export const TOOLS: ToolDef[] = [
     color: 'grape',
     icon: IconMovie,
     component: lazy(() => import('./anim-checklist/AnimChecklistTool')),
+  },
+  {
+    id: 'game_launcher',
+    title: 'Game Launcher',
+    description: 'Danh sách game nội bộ đang hoạt động — bấm để mở game trong tab mới.',
+    category: 'Game',
+    color: 'cyan',
+    icon: IconDeviceGamepad2,
+    component: lazy(() => import('./game-launcher/GameLauncherTool')),
   },
   {
     id: 'spine_review',

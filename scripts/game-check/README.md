@@ -40,10 +40,42 @@ npm run game-check -- --dry-run     # chỉ kiểm tra, không ghi
 npm run game-check -- --login       # đăng nhập Google lại (để đọc/ghi Sheet)
 npm run game-check -- --game-login  # dán lại cookie đăng nhập trang game
 
-# Chạy thử vài game (KHÔNG ghi Sheet — tránh xoá kết quả của các game còn lại)
+# Chạy một phần — CHỈ cập nhật các ID này trong tab game_id, giữ nguyên game khác
 npm run game-check -- --limit 5            # 5 game đầu trong tab Ids Game
-npm run game-check -- --ids 1234,5678      # đúng các ID này (kể cả ID không có trong tab)
+npm run game-check -- --ids 1234,10500     # đúng các ID này (kể cả ID không có trong tab)
+npm run game-check -- --range 9990-0000    # ID 4 số (kts), giảm dần, 5 request/giây
+npm run game-check -- --range 00000-00500  # ID 5 số (gss) — viết đủ 5 chữ số
+npm run game-check -- --range 00000-99999 --yes   # bỏ qua hỏi xác nhận (dải > 500 ID)
 ```
+
+## URL & prefix
+
+Mẫu URL lấy từ `GAME_URL_TEMPLATE` (.env) hoặc key **`game.urlTemplate`** trong tab `settings`
+(dùng chung với Game Launcher trên web). Placeholder `{prefix}` thay theo số chữ số của ID
+(`ID_PREFIXES` hoặc key **`game.idPrefixes`**, vd `4:kts,5:gss`):
+
+| ID | URL |
+|---|---|
+| `0042` (4 số) | `…/en/kts0042/?token=***` |
+| `10500` (5 số) | `…/en/gss10500/?token=***` |
+
+ID có số chữ số không khai báo prefix → ❌ Không hoạt động.
+
+**ID 4 số và 5 số là 2 dải riêng**, có thể trùng số: `0042` (kts) ≠ `00042` (gss).
+Số chữ số được tính theo đúng chuỗi ID, nên:
+
+- Trong tab `Ids Game`, cột ID phải **giữ số 0 ở đầu**: định dạng ô là *Plain text*
+  (Format → Number → Plain text) hoặc số tuỳ chỉnh `0000` / `00000`. Nếu ô là số thường,
+  `00042` sẽ bị đọc thành `42` → sai prefix.
+- Với `--range`, **viết đủ số chữ số**: `00000-00500` (5 số), `0000-0500` (4 số).
+
+## Quét dải ID (`--range`)
+
+- Giới hạn **5 request/giây** (đổi bằng `RATE_LIMIT`); dải > 500 ID sẽ hỏi xác nhận kèm thời gian ước tính.
+- **10 lần liên tiếp** bị chặn / quá tải (HTTP 429, 503, timeout) → **tự dừng, không ghi gì**.
+- HTTP 429/503 tính là "lỗi kết nối", không phải game chết.
+- Tên game: tiêu đề trang; nếu không có thì lấy từ tab `Ids Game` (nếu ID có trong đó).
+- ⚠️ Quét hàng nghìn ID nên báo trước cho DevOps / người quản lý hệ thống staging.
 
 ## Đăng nhập trang game (Sign In)
 
@@ -74,14 +106,23 @@ Cookie chỉ được gửi tới domain của game, không gửi đi nơi khác
 
 ## Kết quả (tab `game_id`)
 
+Tab chỉ chứa **game đang hoạt động** — Game Launcher trên web đọc từ đây.
+
 | Cột | Nội dung |
 |---|---|
 | A `id` | ID game (từ tab `Ids Game`) |
-| B `name` | **Tiêu đề `<title>` của trang** khi load được; nếu lỗi / không có tiêu đề / tiêu đề nằm trong `IGNORE_TITLES` (mặc định `Sign In`) → tên trong tab `Ids Game` |
-| C `status` | `✅ Hoạt động` · `❌ Không hoạt động (HTTP 404)` · `⚠️ Lỗi kết nối (TIMEOUT)`… |
+| B `name` | **Tiêu đề `<title>` của trang** (bỏ tiền tố trong `TITLE_STRIP_PREFIXES`, vd `Techplay - `); nếu không có / nằm trong `IGNORE_TITLES` → tên trong tab `Ids Game` |
+| C `status` | `✅ Hoạt động` |
 
-- Trang chỉ có tiêu đề trong `IGNORE_TITLES` **và** không có tên trong `Ids Game` → ❌ Không hoạt động,
-  **không ghi** vào tab `game_id` (danh sách ID bị bỏ qua in ở cuối terminal).
+| Kết quả kiểm tra | Xử lý |
+|---|---|
+| ✅ Hoạt động | Ghi vào tab |
+| ❌ Không hoạt động | **Xoá khỏi tab** |
+| ⚠️ Lỗi kết nối | Thử lại 1 lần; vẫn lỗi → **giữ nguyên dòng cũ** (nếu đã có), không xoá |
+
+- Chạy **cả danh sách** (không có `--limit/--ids/--range`): tab = đúng các game hoạt động trong `Ids Game`.
+- Chạy **một phần**: chỉ cập nhật các ID vừa kiểm tra, các game khác giữ nguyên. Tab luôn sắp xếp theo ID.
+
 - Giữ nguyên dòng tiêu đề (dòng 1) và các cột ngoài A–C; tab chưa có thì tự tạo.
 - Game build bằng engine (Cocos/Unity…) thường có cùng một tiêu đề chung (vd `Game`) — khi đó cột
   `name` sẽ giống nhau giữa các game. Chi tiết HTTP / thời gian phản hồi xem ở terminal.

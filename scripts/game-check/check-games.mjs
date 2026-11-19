@@ -12,8 +12,11 @@
  *   npm run game-check                # kiểm tra + ghi kết quả
  *   npm run game-check -- --dry-run   # chỉ kiểm tra, không ghi Sheet
  *   npm run game-check -- --login     # đăng nhập Google lại
- *   npm run game-check -- --limit 5           # chạy thử 5 game đầu (không ghi Sheet)
- *   npm run game-check -- --ids 1234,5678     # chạy thử đúng các ID này (không ghi Sheet)
+ *   npm run game-check -- --limit 5           # 5 game đầu trong tab Ids Game
+ *   npm run game-check -- --ids 1234,5678     # đúng các ID này
+ *   npm run game-check -- --range 9990-0000   # quét dải ID 4 số (giới hạn tốc độ, tự dừng khi bị chặn)
+ *   npm run game-check -- --range 00000-00500 # quét dải ID 5 số (viết đủ 5 chữ số)
+ * Chạy một phần (--limit / --ids / --range) → chỉ cập nhật các ID đó trong tab game_id, giữ nguyên phần còn lại.
  *
  * Cấu hình: scripts/game-check/.env (xem .env.example). Hướng dẫn: README.md cùng thư mục.
  */
@@ -56,9 +59,11 @@ const ONLY_IDS = argValue('--ids')
   ?.split(',')
   .map((id) => id.trim())
   .filter(Boolean);
-/** Chạy thử một phần danh sách → không ghi Sheet (ghi sẽ xoá kết quả của các game còn lại). */
-const PARTIAL = LIMIT !== null || Boolean(ONLY_IDS?.length);
-const DRY_RUN = args.has('--dry-run') || PARTIAL;
+const RANGE = argValue('--range');
+const ASSUME_YES = args.has('--yes');
+/** Chạy một phần → ghi GỘP vào tab game_id (chỉ cập nhật các ID đã kiểm tra, giữ nguyên phần còn lại). */
+const PARTIAL = LIMIT !== null || Boolean(ONLY_IDS?.length) || RANGE !== null;
+const DRY_RUN = args.has('--dry-run');
 const FORCE_LOGIN = args.has('--login');
 const FORCE_GAME_LOGIN = args.has('--game-login');
 
@@ -94,7 +99,14 @@ const CFG = {
   resultTab: env('RESULT_TAB', 'game_id'),
   /** Để trống = email tài khoản Google đang đăng nhập trong script */
   tokenEmail: env('TOKEN_EMAIL'),
+  /** Để trống → lấy key game.urlTemplate trong tab settings của Sheet cấu hình */
   urlTemplate: env('GAME_URL_TEMPLATE'),
+  /** Prefix theo số chữ số của ID, vd "4:kts,5:gss". Để trống → lấy key game.idPrefixes trong tab settings */
+  idPrefixes: env('ID_PREFIXES'),
+  /** ID ngắn hơn thì thêm số 0 phía trước khi quét dải (vd 12 → 0012) */
+  minIdDigits: Number(env('MIN_ID_DIGITS', '4')),
+  /** Số request tối đa mỗi giây (0 = không giới hạn). Khi --range mặc định 5. */
+  rateLimit: Number(env('RATE_LIMIT', '0')),
   startRow: Number(env('START_ROW', '2')),
   concurrency: Number(env('CONCURRENCY', '8')),
   timeoutMs: Number(env('TIMEOUT_MS', '15000')),
@@ -104,6 +116,11 @@ const CFG = {
   /** Cookie phiên của trang game (oauth2-proxy). Để trống → script hỏi khi gặp trang Sign In. */
   gameCookie: env('GAME_COOKIE'),
   sessionCookieName: env('SESSION_COOKIE_NAME', '_oauth2_proxy'),
+  /** Tiền tố bỏ khỏi tên game, vd "Techplay" → "Techplay - Tên game" thành "Tên game". Phân tách bằng dấu phẩy. */
+  titleStripPrefixes: env('TITLE_STRIP_PREFIXES')
+    .split(',')
+    .map((t) => t.trim())
+    .filter(Boolean),
   ignoreTitles: env('IGNORE_TITLES', 'Sign In')
     .split(',')
     .map((t) => t.trim().toLowerCase())
@@ -123,7 +140,7 @@ function validateConfig() {
   if (CFG.configSheetId === CFG.gameListSheetId && CFG.resultTab === CFG.gameListTab) {
     fail('RESULT_TAB trùng với tab danh sách game — sẽ xoá mất danh sách. Kiểm tra lại cấu hình.');
   }
-  if (!CFG.urlTemplate.includes('{id}')) fail('GAME_URL_TEMPLATE phải chứa {id}, vd https://game.internal/play/{id}');
+  if (RANGE !== null && !/^\d+-\d+$/.test(RANGE)) fail('--range cần dạng <từ>-<đến>, vd --range 9990-0000');
   if (CFG.extraCaFile && !existsSync(CFG.extraCaFile)) fail(`Không thấy file CA: ${CFG.extraCaFile}`);
 }
 
@@ -215,6 +232,33 @@ async function readToken(client, email) {
   const token = String(row[2] ?? '').trim();
   if (!token && CFG.urlTemplate.includes('{token}')) fail(`Email ${email} chưa có token (cột C, tab "${CFG.tokenTab}").`);
   return { email, userId: String(row[1] ?? '').trim(), token };
+}
+
+/** Đọc tab settings (key | value) của Sheet cấu hình — dùng chung cấu hình với web. */
+async function readSettings(client) {
+  try {
+    const data = await sheetsRequest(client, `${SHEETS_API}/${CFG.configSheetId}/values/${encodeURIComponent("'settings'!A2:B")}`);
+    return Object.fromEntries((data.values ?? []).filter((r) => r[0]).map((r) => [String(r[0]).trim(), String(r[1] ?? '').trim()]));
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Sinh danh sách ID theo dải, giữ thứ tự (vd 9990-0000 chạy giảm dần).
+ * Số chữ số = theo cách viết dải: "0000-9999" → ID 4 số (kts), "00000-99999" → ID 5 số (gss).
+ * ID 4 số và 5 số là 2 dải riêng (0042 ≠ 00042).
+ */
+function rangeIds(spec) {
+  const [fromText, toText] = spec.split('-');
+  const digits = Math.max(fromText.length, toText.length, CFG.minIdDigits);
+  const from = Number(fromText);
+  const to = Number(toText);
+  if (String(Math.max(from, to)).length > digits) fail(`--range ${spec}: số vượt quá ${digits} chữ số.`);
+  const step = from <= to ? 1 : -1;
+  const ids = [];
+  for (let n = from; step > 0 ? n <= to : n >= to; n += step) ids.push(String(n).padStart(digits, '0'));
+  return ids;
 }
 
 /** Đọc các cặp cột ID–Tên. Trả về [{ id, name, row, col }] (row/col 0-based). */
@@ -372,6 +416,17 @@ function fetchUrl(url, redirects = 0) {
 
 const STATUS = { OK: '✅ Hoạt động', DEAD: '❌ Không hoạt động', ERROR: '⚠️ Lỗi kết nối' };
 
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** Bỏ tiền tố trong TITLE_STRIP_PREFIXES: "Techplay - Tên game" / "techplay – Tên game" / "Techplay | Tên game" → "Tên game". */
+function cleanName(name) {
+  let out = String(name ?? '').trim();
+  for (const prefix of CFG.titleStripPrefixes) {
+    out = out.replace(new RegExp(`^${escapeRegExp(prefix)}\\s*[-–—|:]\\s*`, 'i'), '');
+  }
+  return out.trim();
+}
+
 /** Lấy nội dung thẻ <title> (giải mã HTML entity cơ bản). */
 function extractTitle(html) {
   const m = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html ?? '');
@@ -393,8 +448,23 @@ function extractTitle(html) {
 /** Thông tin token dùng cho mọi URL (gán trong main). */
 let credentials = { userId: '', token: '' };
 
+/** "4:kts,5:gss" → { 4: 'kts', 5: 'gss' } */
+let prefixByLength = {};
+function parsePrefixes(text) {
+  return Object.fromEntries(
+    text
+      .split(',')
+      .map((p) => p.split(':').map((x) => x.trim()))
+      .filter(([len, prefix]) => /^\d+$/.test(len) && prefix !== undefined),
+  );
+}
+
+/** Prefix của ID theo số chữ số (vd 4 số → kts, 5 số → gss). */
+const prefixFor = (id) => prefixByLength[String(id).length] ?? '';
+
 function buildUrl(id) {
   return CFG.urlTemplate
+    .replaceAll('{prefix}', encodeURIComponent(prefixFor(id)))
     .replaceAll('{id}', encodeURIComponent(id))
     .replaceAll('{user_id}', encodeURIComponent(credentials.userId))
     .replaceAll('{token}', encodeURIComponent(credentials.token));
@@ -406,15 +476,31 @@ function mask(text) {
   return text.replaceAll(encodeURIComponent(credentials.token), '***').replaceAll(credentials.token, '***');
 }
 
+/** Giới hạn tốc độ: các request cách nhau tối thiểu 1000/RATE ms (dùng chung cho mọi luồng). */
+let nextSlot = 0;
+async function throttle() {
+  if (!CFG.rateLimit) return;
+  const gap = 1000 / CFG.rateLimit;
+  const wait = Math.max(0, nextSlot - Date.now());
+  nextSlot = Math.max(nextSlot, Date.now()) + gap;
+  if (wait) await new Promise((r) => setTimeout(r, wait));
+}
+
 async function checkGame(game) {
+  if (CFG.idPrefixes && !prefixFor(game.id) && CFG.urlTemplate.includes('{prefix}')) {
+    return { ...game, url: '', ms: 0, httpStatus: '', title: '', result: 'DEAD', detail: `Không có prefix cho ID ${String(game.id).length} chữ số` };
+  }
+  await throttle();
   const realUrl = buildUrl(game.id);
   const url = mask(realUrl);
   const started = Date.now();
   const res = await fetchUrl(realUrl);
   const ms = Date.now() - started;
-  const base = { ...game, url, ms, httpStatus: res.status ?? '', finalUrl: mask(res.finalUrl), title: extractTitle(res.body) };
+  const base = { ...game, url, ms, httpStatus: res.status ?? '', finalUrl: mask(res.finalUrl), title: cleanName(extractTitle(res.body)) };
 
   if (res.error) return { ...base, result: 'ERROR', detail: res.error };
+  // 429/503 = server đang chặn / quá tải → không kết luận game chết
+  if (res.status === 429 || res.status === 503) return { ...base, result: 'ERROR', detail: `HTTP ${res.status}` };
   if (res.status >= 400) return { ...base, result: 'DEAD', detail: `HTTP ${res.status}` };
   const body = (res.body ?? '').toLowerCase();
   if (CFG.deadText && body.includes(CFG.deadText.toLowerCase())) {
@@ -430,9 +516,9 @@ async function checkGame(game) {
     const genericTitle = base.title;
     base.title = '';
     base.signIn = true; // trang đăng nhập → có thể do cookie phiên hết hạn
-    // Không có tên trong danh sách → coi là không hoạt động và không ghi vào Sheet
+    // Không có tên trong danh sách → coi là không hoạt động (bị loại khỏi tab game_id)
     if (!game.name) {
-      return { ...base, result: 'DEAD', detail: `Chỉ có trang "${genericTitle}", không có tên game`, skipWrite: true };
+      return { ...base, result: 'DEAD', detail: `Chỉ có trang "${genericTitle}", không có tên game` };
     }
   }
   return { ...base, result: 'OK', detail: redirected };
@@ -453,23 +539,28 @@ async function mapLimit(items, limit, fn) {
 // ---------------------------------------------------------------- write results
 
 
-/** Trạng thái ghi vào cột status, kèm lý do khi lỗi. */
-function statusText(r) {
-  return r.result === 'OK' ? STATUS.OK : `${STATUS[r.result]} (${r.detail})`;
-}
-
 /**
  * Ghi kết quả vào tab RESULT_TAB (mặc định `game_id`) của Sheet cấu hình, 3 cột: id | name | status.
- * - name = <title> của trang khi load được; nếu không có thì dùng tên trong tab danh sách game
- * - Giữ dòng tiêu đề (dòng 1) và các cột khác; chỉ xoá & ghi lại vùng A2:C
+ * - Chỉ chứa game hoạt động: OK → ghi/cập nhật, không hoạt động → xoá
+ * - Lỗi kết nối (có thể chỉ do mạng): giữ nguyên dòng cũ nếu đã có
+ * - replaceAll = true (chạy cả danh sách): tab = đúng các game trong danh sách
+ *   replaceAll = false (--range / --ids / --limit): chỉ cập nhật các ID đã kiểm tra, giữ nguyên ID khác
+ * - Giữ dòng tiêu đề (dòng 1) và các cột khác; chỉ ghi lại vùng A2:C. Sắp xếp theo ID.
  */
-async function writeGameIdTab(client, results) {
+async function writeGameIdTab(client, results, { replaceAll }) {
   const sheetId = CFG.configSheetId;
   const tab = `'${CFG.resultTab}'`;
   const meta = await sheetsRequest(client, `${SHEETS_API}/${sheetId}?fields=sheets.properties.title`);
   const exists = meta.sheets.some((s) => s.properties.title === CFG.resultTab);
 
-  if (!exists) {
+  const previous = new Map();
+  if (exists) {
+    const old = await sheetsRequest(client, `${SHEETS_API}/${sheetId}/values/${encodeURIComponent(`${tab}!A2:C`)}`);
+    for (const row of old.values ?? []) {
+      const id = String(row[0] ?? '').trim();
+      if (id) previous.set(id, [id, cleanName(row[1]), row[2] ?? '']);
+    }
+  } else {
     await sheetsRequest(client, `${SHEETS_API}/${sheetId}:batchUpdate`, {
       method: 'POST',
       data: { requests: [{ addSheet: { properties: { title: CFG.resultTab, gridProperties: { frozenRowCount: 1 } } } }] },
@@ -480,12 +571,33 @@ async function writeGameIdTab(client, results) {
     });
   }
 
+  const next = replaceAll ? new Map() : new Map(previous);
+  let written = 0;
+  let kept = 0;
+  let removed = 0;
+  for (const r of results) {
+    if (r.result === 'OK') {
+      next.set(r.id, [r.id, r.title || r.name, STATUS.OK]);
+      written++;
+    } else if (r.result === 'DEAD') {
+      if (previous.has(r.id)) removed++;
+      next.delete(r.id);
+    } else if (previous.has(r.id)) {
+      next.set(r.id, previous.get(r.id)); // ERROR → giữ kết quả cũ
+      kept++;
+    }
+  }
+  if (replaceAll) removed += [...previous.keys()].filter((id) => !next.has(id) && !results.some((r) => r.id === id)).length;
+
+  const rows = [...next.values()].sort((a, b) => a[0].length - b[0].length || a[0].localeCompare(b[0], undefined, { numeric: true }));
   await sheetsRequest(client, `${SHEETS_API}/${sheetId}/values/${encodeURIComponent(`${tab}!A2:C`)}:clear`, { method: 'POST' });
-  const rows = results.filter((r) => !r.skipWrite).map((r) => [r.id, (r.result === 'OK' && r.title) || r.name, statusText(r)]);
-  await sheetsRequest(client, `${SHEETS_API}/${sheetId}/values/${encodeURIComponent(`${tab}!A2`)}?valueInputOption=RAW`, {
-    method: 'PUT',
-    data: { values: rows },
-  });
+  if (rows.length) {
+    await sheetsRequest(client, `${SHEETS_API}/${sheetId}/values/${encodeURIComponent(`${tab}!A2`)}?valueInputOption=RAW`, {
+      method: 'PUT',
+      data: { values: rows },
+    });
+  }
+  return { written, kept, removed, total: rows.length };
 }
 
 // ---------------------------------------------------------------- main
@@ -493,23 +605,51 @@ const NETWORK_ERRORS = ['ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED', 'ETIMEDOUT', '
 
 async function main() {
   validateConfig();
-  const mode = PARTIAL ? '  (chạy thử: không ghi Sheet)' : DRY_RUN ? '  (dry-run: không ghi Sheet)' : '';
+  const mode = DRY_RUN ? '  (dry-run: không ghi Sheet)' : PARTIAL ? '  (chạy một phần: chỉ cập nhật các ID đã kiểm tra)' : '';
   console.log(c.bold('\n🎮 PEAK Game Link Check') + c.dim(mode));
 
   const client = await getGoogleClient();
+
+  // Mẫu URL + prefix: .env ưu tiên, không có thì lấy từ tab settings (dùng chung với Game Launcher trên web)
+  const settings = await readSettings(client);
+  CFG.urlTemplate ||= settings['game.urlTemplate'] ?? '';
+  CFG.idPrefixes ||= settings['game.idPrefixes'] ?? '';
+  prefixByLength = parsePrefixes(CFG.idPrefixes);
+  if (!CFG.urlTemplate.includes('{id}')) {
+    fail('Chưa có mẫu URL — đặt key game.urlTemplate trong tab settings (hoặc GAME_URL_TEMPLATE trong .env), phải chứa {id}.');
+  }
+  if (CFG.urlTemplate.includes('{prefix}') && !Object.keys(prefixByLength).length) {
+    fail('Mẫu URL có {prefix} nhưng chưa khai báo game.idPrefixes (vd 4:kts,5:gss).');
+  }
+
   const { title, tab, games: allGames } = await readGames(client);
   console.log(`   Danh sách game: ${title} › ${tab}`);
 
-  // Chạy thử: chỉ lấy vài game
+  // Chạy một phần: --range / --ids / --limit
   let games = allGames;
-  if (ONLY_IDS?.length) {
+  if (RANGE !== null) {
+    const names = new Map(allGames.map((g) => [g.id, g.name]));
+    games = rangeIds(RANGE).map((id) => ({ id, name: names.get(id) ?? '', row: -1, col: -1 }));
+    CFG.rateLimit ||= 5; // quét dải → mặc định 5 request/giây
+    const minutes = Math.ceil(games.length / CFG.rateLimit / 60);
+    const digits = games[0].id.length;
+    const prefix = prefixByLength[digits] ? ` → prefix "${prefixByLength[digits]}"` : '';
+    console.log(`   Quét dải ${RANGE}: ${games.length} ID ${digits} chữ số${prefix} · ${CFG.rateLimit} request/giây · khoảng ${minutes} phút`);
+    if (games.length > 500 && !ASSUME_YES) {
+      if (!process.stdin.isTTY) fail('Dải lớn hơn 500 ID — thêm --yes để xác nhận.');
+      const rl = createInterface({ input: process.stdin, output: process.stdout });
+      const ok = (await rl.question('   Tiếp tục? (y/N) ')).trim().toLowerCase() === 'y';
+      rl.close();
+      if (!ok) fail('Đã huỷ.');
+    }
+  } else if (ONLY_IDS?.length) {
     games = ONLY_IDS.map((id) => allGames.find((g) => g.id === id) ?? { id, name: '', row: -1, col: -1 });
     const missing = games.filter((g) => g.row === -1).map((g) => g.id);
     if (missing.length) console.log(c.yellow(`   Không có trong tab "${tab}" (vẫn kiểm tra): ${missing.join(', ')}`));
   } else if (LIMIT !== null) {
     games = allGames.slice(0, Number(LIMIT));
   }
-  if (PARTIAL) console.log(c.dim(`   Chạy thử ${games.length}/${allGames.length} game`));
+  if (PARTIAL && RANGE === null) console.log(c.dim(`   Chạy ${games.length}/${allGames.length} game`));
 
   if (/\{(token|user_id)\}/.test(CFG.urlTemplate)) {
     const email = CFG.tokenEmail || (await getAccountEmail(client));
@@ -551,29 +691,58 @@ async function main() {
   };
   print(probe);
 
+  // Bị chặn / quá tải liên tục (429, 503, timeout…) → dừng hẳn, không cố chạy tiếp
+  const MAX_BLOCKED_STREAK = 10;
+  let blockedStreak = 0;
+  let aborted = false;
+
   await mapLimit(games.slice(1), CFG.concurrency, async (game, i) => {
+    if (aborted) return;
     const r = await checkGame(game);
     results[i + 1] = r;
     done++;
-    print(r);
+    blockedStreak = r.result === 'ERROR' ? blockedStreak + 1 : 0;
+    if (blockedStreak >= MAX_BLOCKED_STREAK) aborted = true;
+    // Quét dải: phần lớn ID không tồn tại → chỉ in game hoạt động / lỗi và tiến độ mỗi 100 ID
+    if (RANGE === null || r.result !== 'DEAD') print(r);
+    else if (done % 100 === 0) console.log(c.dim(`  … [${done}/${games.length}]`));
   });
+
+  if (aborted) {
+    fail(
+      `Dừng lại: ${MAX_BLOCKED_STREAK} lần liên tiếp lỗi kết nối / bị chặn (HTTP 429/503, timeout).\n` +
+        '  Có thể server đang giới hạn tốc độ — giảm RATE_LIMIT / CONCURRENCY rồi chạy lại. Chưa ghi gì vào Sheet.',
+    );
+  }
+
+  // Lỗi kết nối có thể chỉ do mạng chập chờn → thử lại từng game một lần
+  const errorIdx = results.map((r, i) => (r.result === 'ERROR' ? i : -1)).filter((i) => i !== -1);
+  if (errorIdx.length && errorIdx.length < results.length) {
+    console.log(c.dim(`\n   Thử lại ${errorIdx.length} game lỗi kết nối...`));
+    for (const i of errorIdx) {
+      await new Promise((r) => setTimeout(r, 500));
+      const r = await checkGame(games[i]);
+      results[i] = r;
+      if (r.result !== 'ERROR') print(r);
+    }
+  }
 
   const count = (k) => results.filter((r) => r.result === k).length;
   console.log(
     `\n${c.bold('Kết quả:')} ${c.green(`${count('OK')} hoạt động`)} · ${c.red(`${count('DEAD')} không hoạt động`)} · ${c.yellow(`${count('ERROR')} lỗi kết nối`)}`,
   );
-  const skipped = results.filter((r) => r.skipWrite);
-  if (skipped.length) {
-    console.log(c.dim(`Không ghi ${skipped.length} game (chỉ có trang đăng nhập, không có tên): ${skipped.map((r) => r.id).join(', ')}`));
-  }
 
   if (DRY_RUN) {
     console.log(c.dim('Không ghi vào Sheet.\n'));
   } else if (count('ERROR') === results.length) {
     console.log(c.yellow('Tất cả đều lỗi kết nối — bỏ qua ghi Sheet để không ghi đè kết quả cũ.\n'));
   } else {
-    await writeGameIdTab(client, results);
-    console.log(c.green(`📝 Đã ghi kết quả vào tab "${CFG.resultTab}" của Sheet cấu hình`));
+    const { written, kept, removed, total } = await writeGameIdTab(client, results, { replaceAll: !PARTIAL });
+    console.log(
+      c.green(`📝 Tab "${CFG.resultTab}": ${total} game`) +
+        c.dim(` (cập nhật ${written} game hoạt động · xoá ${removed} game không hoạt động${PARTIAL ? ' · giữ nguyên các ID khác' : ''})`),
+    );
+    if (kept) console.log(c.yellow(`   Giữ nguyên ${kept} game lỗi kết nối (dùng kết quả lần trước)`));
     console.log(c.dim(`   https://docs.google.com/spreadsheets/d/${CFG.configSheetId}/edit\n`));
   }
 

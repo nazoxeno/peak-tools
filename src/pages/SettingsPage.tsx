@@ -109,6 +109,8 @@ export function SettingsPage() {
                 <Row k="Tự chuyển owner cho" v={config.clone.newOwnerEmail || '—'} />
                 <Row k="Email mặc định (Ownership)" v={config.changeOwner.defaultEmail || '—'} />
                 <Row k="Engine Script ID" v={config.engine.scriptId ? `${config.engine.scriptId.slice(0, 12)}…` : '—'} />
+                <Row k="Mẫu URL game" v={config.game.urlTemplate ? 'Đã cấu hình' : '—'} />
+                <Row k="Prefix theo độ dài ID" v={config.game.idPrefixes || '—'} />
               </Table.Tbody>
             </Table>
             <Text size="sm" fw={600} mt="md" mb={4}>

@@ -59,6 +59,7 @@ export async function loadConfigFromSheet(sheetId: string): Promise<AppConfig> {
     },
     changeOwner: { defaultEmail: settings['changeOwner.defaultEmail'] ?? '' },
     engine: { scriptId: settings['engine.scriptId'] ?? '' },
+    game: { urlTemplate: settings['game.urlTemplate'] ?? '', idPrefixes: settings['game.idPrefixes'] ?? '' },
     typeColors: tabNames.has(TABS.typeColors) ? rowsToMap(tab(TABS.typeColors)) : d.typeColors,
     statusColors: tabNames.has(TABS.statusColors) ? rowsToMap(tab(TABS.statusColors)) : d.statusColors,
   };
@@ -83,6 +84,8 @@ export async function createConfigTemplate(shareDomain?: string) {
         ['clone.newOwnerEmail', '', SETTING_KEYS['clone.newOwnerEmail']],
         ['changeOwner.defaultEmail', '', SETTING_KEYS['changeOwner.defaultEmail']],
         ['engine.scriptId', '', SETTING_KEYS['engine.scriptId']],
+        ['game.urlTemplate', '', SETTING_KEYS['game.urlTemplate']],
+        ['game.idPrefixes', '', SETTING_KEYS['game.idPrefixes']],
       ],
     },
     {

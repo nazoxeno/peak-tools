@@ -6,6 +6,7 @@ import { useAuth } from './auth/AuthProvider';
 import { CONTACT } from './branding';
 import { AppLayout } from './layout/AppLayout';
 import { hrefOf, useRoute } from './lib/router';
+import { markToolUsed } from './lib/recentTools';
 import { useRunningTasks } from './lib/taskStore';
 import { AccessDeniedPage } from './pages/AccessDeniedPage';
 import { HomePage } from './pages/HomePage';
@@ -66,6 +67,11 @@ function SignedInApp() {
   const route = useRoute();
   const { status, error, canEditConfig } = useAppConfig();
   const tool = TOOLS.find((t) => t.id === route);
+
+  // Ghi nhớ tool vừa mở → mục "Dùng gần đây" ở trang chủ
+  useEffect(() => {
+    if (tool) markToolUsed(tool.id);
+  }, [tool]);
 
   /**
    * Chỉ cho vào khi đọc được Sheet cấu hình (= được share Sheet).

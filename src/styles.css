@@ -134,3 +134,41 @@ body {
   background-clip: text;
   color: transparent;
 }
+
+/* ---------- Home (gọn) ---------- */
+.hero-compact {
+  padding: 20px 24px;
+}
+
+.recent-chip {
+  padding: 6px 12px 6px 6px;
+  border-radius: var(--mantine-radius-xl);
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.recent-chip:hover {
+  border-color: var(--mantine-color-brand-4);
+  transform: translateY(-1px);
+}
+
+.tool-card-compact {
+  height: 100%;
+}
+
+.tool-card-compact:hover {
+  transform: translateY(-2px);
+}
+
+/* Mũi tên chỉ hiện khi rê chuột */
+.tool-card-compact .tool-card-cta {
+  opacity: 0;
+  flex-shrink: 0;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.tool-card-compact:hover .tool-card-cta {
+  opacity: 1;
+  transform: translate(2px, -2px);
+}
