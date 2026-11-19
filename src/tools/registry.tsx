@@ -1,4 +1,4 @@
-import { IconBone, IconBrandStackshare, IconDeviceGamepad2, IconFolderShare, IconListCheck, IconMovie, IconUserShare, type Icon } from '@tabler/icons-react';
+import { IconBone, IconBrandStackshare, IconDeviceGamepad2, IconPhotoScan, IconFolderShare, IconListCheck, IconMovie, IconUserShare, type Icon } from '@tabler/icons-react';
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
 
 /**
@@ -85,6 +85,15 @@ export const TOOLS: ToolDef[] = [
     icon: IconBone,
     fullWidth: true,
     component: lazy(() => import('./spine-review/SpineReviewTool')),
+  },
+  {
+    id: 'image_batch',
+    title: 'Batch Image Processor',
+    description: 'Resize, cắt viền, nén PNG giảm màu, giới hạn dung lượng, đổi PNG/JPG/WebP; GIF ↔ frame, sprite sheet.',
+    category: 'Asset',
+    color: 'orange',
+    icon: IconPhotoScan,
+    component: lazy(() => import('./image-batch/ImageBatchTool')),
   },
 ];
 
