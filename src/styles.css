@@ -172,3 +172,22 @@ body {
   opacity: 1;
   transform: translate(2px, -2px);
 }
+
+/* ---------- File dropzone ---------- */
+.file-dropzone {
+  border: 2px dashed var(--app-border);
+  border-radius: var(--mantine-radius-lg);
+  background: var(--app-surface);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.file-dropzone:hover,
+.file-dropzone[data-dragging] {
+  border-color: var(--mantine-color-brand-4);
+  background: light-dark(var(--mantine-color-brand-0), var(--mantine-color-dark-6));
+}
+
+.file-dropzone[data-disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

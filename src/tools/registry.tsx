@@ -1,4 +1,4 @@
-import { IconBone, IconDeviceGamepad2, IconFolderShare, IconListCheck, IconMovie, IconUserShare, type Icon } from '@tabler/icons-react';
+import { IconBone, IconBrandStackshare, IconDeviceGamepad2, IconFolderShare, IconListCheck, IconMovie, IconUserShare, type Icon } from '@tabler/icons-react';
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
 
 /**
@@ -12,7 +12,7 @@ export type ToolDef = {
   id: string;
   title: string;
   description: string;
-  category: 'Google Drive' | 'Google Sheets' | 'Game' | 'Preview';
+  category: 'Google Drive' | 'Google Sheets' | 'Game' | 'Preview' | 'Asset';
   /** Màu Mantine cho icon/badge, vd 'brand', 'teal', 'orange' */
   color: string;
   icon: Icon;
@@ -66,6 +66,15 @@ export const TOOLS: ToolDef[] = [
     color: 'cyan',
     icon: IconDeviceGamepad2,
     component: lazy(() => import('./game-launcher/GameLauncherTool')),
+  },
+  {
+    id: 'spine_inspector',
+    title: 'Spine Inspector',
+    description: 'Xem animation, skin, event, thời lượng trong file Spine .json; so sánh 2 phiên bản.',
+    category: 'Asset',
+    color: 'grape',
+    icon: IconBrandStackshare,
+    component: lazy(() => import('./spine-inspector/SpineInspectorTool')),
   },
   {
     id: 'spine_review',
