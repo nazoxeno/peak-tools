@@ -133,6 +133,7 @@ function artFinalizeTab(p) {
 
   var widths = p.isPSD ? [40, 70, 200, 300, 120, 300] : [40, 70, 250, 200, 300, 120, 70, 300, 250];
   widths.forEach(function (w, i) { sheet.setColumnWidth(i + 1, w); });
+  fitTypeColumn_(sheet, numRows);
 
   formatFolderHeaderRows_(sheet, state.folderHeaderRows, headers.length);
   return { ok: true };
@@ -254,6 +255,7 @@ function animFinalize(p) {
   applyDropdown_(sheet, sheet.getRange(2, 6, lastRow - 1, 1), p.statusColors, '#c6e0b4');
 
   [45, 70, 300, 200, 275, 80, 275, 365].forEach(function (w, i) { sheet.setColumnWidth(i + 1, w); });
+  fitTypeColumn_(sheet, lastRow - 1);
   formatFolderHeaderRows_(sheet, p.state.folderHeaderRows, n);
   return { ok: true };
 }
@@ -590,6 +592,19 @@ function applyDropdown_(sheet, range, colorMap, defaultBg) {
     );
   });
   sheet.setConditionalFormatRules(rules);
+}
+
+/** Độ rộng cột Type (cột B) khi có giá trị dài như "Bitmap Font" — đủ để không bị xuống dòng. */
+var TYPE_COL_WIDE = 100;
+var TYPE_LONG_VALUES = ['Bitmap Font'];
+
+/** Nới rộng cột Type nếu trong cột có "Bitmap Font" (gọi sau khi đã đặt độ rộng mặc định). */
+function fitTypeColumn_(sheet, numRows) {
+  if (numRows <= 0) return;
+  var hasLong = sheet.getRange(2, 2, numRows, 1).getDisplayValues().some(function (r) {
+    return TYPE_LONG_VALUES.indexOf(r[0].trim()) !== -1;
+  });
+  if (hasLong) sheet.setColumnWidth(2, TYPE_COL_WIDE);
 }
 
 function formatFolderHeaderRows_(sheet, rows, numCols) {
