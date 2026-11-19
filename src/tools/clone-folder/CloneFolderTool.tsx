@@ -1,6 +1,7 @@
-import { Alert, Button, Card, Code, Divider, Group, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
+import { Alert, Button, Card, Code, Divider, Group, List, ScrollArea, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import {
+  IconAlertTriangle,
   IconArrowRight,
   IconCircleCheck,
   IconExternalLink,
@@ -18,7 +19,7 @@ import { extractId } from '../../google/drive';
 import { useTask } from '../../lib/taskStore';
 import { useSessionState } from '../../lib/useSessionState';
 import type { ToolDef } from '../registry';
-import { cloneFolder, renameFromTemplate } from './cloneFolder';
+import { cloneFolder, renameFromTemplate, type CloneResult } from './cloneFolder';
 
 type Form = { gameId: string; gameName: string; source: string; target: string };
 type Errors = Partial<Record<keyof Form, string>>;
@@ -26,7 +27,7 @@ type Errors = Partial<Record<keyof Form, string>>;
 export default function CloneFolderTool({ tool }: { tool: ToolDef }) {
   const [form, setForm] = useSessionState<Form>(`${tool.id}.form`, { gameId: '', gameName: '', source: '', target: '' });
   const [errors, setErrors] = useState<Errors>({});
-  const task = useTask<{ url: string; files: number; folders: number }>(tool.id);
+  const task = useTask<CloneResult>(tool.id);
   const result = task.result;
   const { config } = useAppConfig();
   const { template } = config.clone;
@@ -55,8 +56,8 @@ export default function CloneFolderTool({ tool }: { tool: ToolDef }) {
     if (!res) return;
     setForm((f) => ({ ...f, gameId: '', gameName: '' }));
     notifications.show({
-      color: 'green',
-      title: 'Clone thành công',
+      color: res.failed.length ? 'orange' : 'green',
+      title: res.failed.length ? `Clone xong, ${res.failed.length} mục lỗi` : 'Clone thành công',
       message: `${res.folders} folder, ${res.files} file`,
     });
   }
@@ -145,7 +146,12 @@ export default function CloneFolderTool({ tool }: { tool: ToolDef }) {
         </Card>
 
         {result && (
-          <Alert color="teal" variant="light" icon={<IconCircleCheck />} title="Clone thành công!">
+          <Alert
+            color={result.failed.length ? 'orange' : 'teal'}
+            variant="light"
+            icon={result.failed.length ? <IconAlertTriangle /> : <IconCircleCheck />}
+            title={result.failed.length ? `Clone xong nhưng có ${result.failed.length} mục lỗi` : 'Clone thành công!'}
+          >
             <Group justify="space-between" wrap="wrap" gap="sm">
               <Text size="sm">
                 Đã tạo {result.folders} folder và {result.files} file.
@@ -162,6 +168,17 @@ export default function CloneFolderTool({ tool }: { tool: ToolDef }) {
                 Mở thư mục mới
               </Button>
             </Group>
+            {result.failed.length > 0 && (
+              <ScrollArea.Autosize mah={180} mt="sm">
+                <List size="xs" spacing={2}>
+                  {result.failed.map((f) => (
+                    <List.Item key={f.path}>
+                      <Code>{f.path}</Code> — {f.error}
+                    </List.Item>
+                  ))}
+                </List>
+              </ScrollArea.Autosize>
+            )}
           </Alert>
         )}
 
