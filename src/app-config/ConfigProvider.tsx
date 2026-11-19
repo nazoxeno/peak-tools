@@ -10,7 +10,7 @@ type ConfigState = {
   config: AppConfig;
   error: ConfigError | null;
   /**
-   * Có quyền sửa Sheet cấu hình (Editor) → được xem/quản lý trang Cấu hình.
+   * Có quyền sửa Sheet cấu hình (Editor) → được xem/quản lý trang Settings.
    * Chạy local khi chưa đặt Sheet ID → true để còn tạo Sheet mẫu.
    */
   canEditConfig: boolean;

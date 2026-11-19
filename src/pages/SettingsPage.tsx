@@ -45,7 +45,7 @@ export function SettingsPage() {
         </ThemeIcon>
         <Stack gap={4}>
           <Title order={2} fz={{ base: 22, sm: 26 }}>
-            Cấu hình
+            Settings
           </Title>
           <Text c="dimmed">Cấu hình được đọc từ Google Sheet — sửa trực tiếp trên Sheet rồi bấm “Tải lại”.</Text>
         </Stack>

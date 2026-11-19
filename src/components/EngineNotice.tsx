@@ -15,7 +15,7 @@ export function EngineNotice() {
         <>
           Thêm key <b>engine.scriptId</b> vào tab <b>settings</b> của Sheet cấu hình — xem{' '}
           <Anchor href={hrefOf('settings')} size="sm">
-            trang Cấu hình
+            trang Settings
           </Anchor>
           .
         </>

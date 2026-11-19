@@ -12,7 +12,7 @@ export type ToolDef = {
   id: string;
   title: string;
   description: string;
-  category: 'Google Drive' | 'Google Sheets' | 'Game' | 'Preview' | 'Asset';
+  category: 'Google Drive' | 'Google Sheets' | 'Game' | 'Asset';
   /** Màu Mantine cho icon/badge, vd 'brand', 'teal', 'orange' */
   color: string;
   icon: Icon;
@@ -80,7 +80,7 @@ export const TOOLS: ToolDef[] = [
     id: 'spine_review',
     title: 'Spine Review',
     description: 'Xem trước animation Spine ngay trong trình duyệt.',
-    category: 'Preview',
+    category: 'Asset',
     color: 'pink',
     icon: IconBone,
     fullWidth: true,

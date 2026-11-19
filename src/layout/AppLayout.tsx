@@ -40,7 +40,7 @@ export function AppLayout({ route, children }: { route: string; children: ReactN
                 </>
               ) : (
                 <Text span fw={600} c="var(--mantine-color-text)">
-                  {route === 'settings' ? 'Cấu hình' : 'Trang chủ'}
+                  {route === 'settings' ? 'Settings' : 'Trang chủ'}
                 </Text>
               )}
             </Text>
@@ -95,12 +95,12 @@ export function AppLayout({ route, children }: { route: string; children: ReactN
         </AppShell.Section>
 
         <AppShell.Section p="sm">
-          {/* Chỉ người có quyền sửa Sheet cấu hình mới thấy trang Cấu hình */}
+          {/* Chỉ người có quyền sửa Sheet cấu hình mới thấy trang Settings */}
           {canEditConfig && (
             <NavLink
               className="nav-link"
               href={hrefOf('settings')}
-              label="Cấu hình"
+              label="Settings"
               leftSection={<IconSettings size={18} stroke={1.7} />}
               active={route === 'settings'}
               onClick={close}
@@ -124,7 +124,7 @@ export function AppLayout({ route, children }: { route: string; children: ReactN
                 <>
                   {' '}—{' '}
                   <Anchor href={hrefOf('settings')} size="sm">
-                    xem trang Cấu hình
+                    xem trang Settings
                   </Anchor>
                   .
                 </>

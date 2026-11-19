@@ -164,7 +164,7 @@ export default function GameLauncherTool({ tool }: { tool: ToolDef }) {
               Thêm key <b>game.urlTemplate</b> vào tab <b>settings</b> của Sheet cấu hình (vd{' '}
               <code>https://…/{'{id}'}/?token={'{token}'}</code>) — xem{' '}
               <Anchor href={hrefOf('settings')} size="sm">
-                trang Cấu hình
+                trang Settings
               </Anchor>
               .
             </>
