@@ -33,25 +33,34 @@ export async function runAnimChecklist(input: AnimInput, ctx: TaskContext) {
     let state = await engine<AnimState>('animPrepare', { spreadsheetId });
     log.info('   Đã làm mới tab Anim_Source');
 
-    for (const [i, root] of roots.entries()) {
-      ctx.checkCancelled();
-      log.info(`[${i + 1}/${roots.length}] ${root.name}`);
-      const res = await engine<{ state: AnimState; logs: string[] }>('animProcessRootFolder', {
-        spreadsheetId,
-        folderId: root.id,
-        state,
-      });
-      state = res.state;
-      pipeEngineLogs(res.logs, log);
+    try {
+      for (const [i, root] of roots.entries()) {
+        ctx.checkCancelled();
+        log.info(`[${i + 1}/${roots.length}] ${root.name}`);
+        const res = await engine<{ state: AnimState; logs: string[] }>('animProcessRootFolder', {
+          spreadsheetId,
+          folderId: root.id,
+          state,
+        });
+        state = res.state;
+        pipeEngineLogs(res.logs, log);
+      }
+    } finally {
+      // Luôn định dạng phần đã ghi — kể cả khi lỗi hoặc bị dừng giữa chừng
+      if (state.currentRow > 2) {
+        log.info('🎨 Định dạng sheet...');
+        try {
+          await engine('animFinalize', {
+            spreadsheetId,
+            state,
+            typeColors: config.typeColors,
+            statusColors: config.statusColors,
+          });
+        } catch (e) {
+          log.warn(`   ⚠️ Không định dạng được sheet: ${(e as Error).message}`);
+        }
+      }
     }
-
-    log.info('🎨 Định dạng sheet...');
-    await engine('animFinalize', {
-      spreadsheetId,
-      state,
-      typeColors: config.typeColors,
-      statusColors: config.statusColors,
-    });
     rows = state.countNo - 1;
     log.success(`   ✅ ${rows} dòng animation`);
   }

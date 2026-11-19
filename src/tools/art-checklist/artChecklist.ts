@@ -78,6 +78,7 @@ export async function runArtChecklist(
 
     const tabParam = { spreadsheetId, sheetName: tab.sheetName, isPSD: tab.isPSD };
     let state: ArtState | null = null;
+    let cancelError: unknown = null;
 
     try {
       const { dirs, hasSubFolders } = await scanTab(tab, ctx);
@@ -105,20 +106,33 @@ export async function runArtChecklist(
           log.info(`   📁 ${dir.name} — ${done}/${total}`);
         }
       }
-      log.info('   🎨 Định dạng tab...');
-      await engine('artFinalizeTab', {
-        ...tabParam,
-        state,
-        typeColors: config.typeColors,
-        statusColors: config.statusColors,
-      });
-      log.success(`   ✅ ${state.globalCount - 1} dòng`);
       ok++;
     } catch (e) {
-      if (isCancelled(e)) throw e;
-      log.error(`   ❌ ${(e as Error).message}`);
-      failed++;
+      if (isCancelled(e)) {
+        cancelError = e;
+      } else {
+        log.error(`   ❌ ${(e as Error).message}`);
+        failed++;
+      }
     }
+
+    // Luôn định dạng phần đã ghi — kể cả khi lỗi hoặc bị dừng giữa chừng
+    const finalState = state as ArtState | null;
+    if (finalState && finalState.currentRowIndex > 2) {
+      try {
+        log.info('   🎨 Định dạng tab...');
+        await engine('artFinalizeTab', {
+          ...tabParam,
+          state: finalState,
+          typeColors: config.typeColors,
+          statusColors: config.statusColors,
+        });
+        log.success(`   ✅ ${finalState.globalCount - 1} dòng`);
+      } catch (e) {
+        log.warn(`   ⚠️ Không định dạng được tab: ${(e as Error).message}`);
+      }
+    }
+    if (cancelError) throw cancelError;
   }
 
   log.success(`✅ HOÀN TẤT — ${ok} tab thành công, ${failed} tab lỗi.`);
