@@ -76,7 +76,8 @@ export async function createConfigTemplate(shareDomain?: string) {
       range: `'${TABS.settings}'!A1`,
       values: [
         ['key', 'value', 'ghi chú'],
-        ['clone.template.gameId', d.clone.template.gameId, SETTING_KEYS['clone.template.gameId']],
+        // Dấu ' ở đầu để Sheets giữ dạng text ("0000" không bị thành số 0)
+        ['clone.template.gameId', `'${d.clone.template.gameId}`, SETTING_KEYS['clone.template.gameId']],
         ['clone.template.gameName', d.clone.template.gameName, SETTING_KEYS['clone.template.gameName']],
         ['clone.newOwnerEmail', '', SETTING_KEYS['clone.newOwnerEmail']],
         ['changeOwner.defaultEmail', '', SETTING_KEYS['changeOwner.defaultEmail']],
